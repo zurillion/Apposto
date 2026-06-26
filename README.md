@@ -11,7 +11,8 @@ densità e dimensioni delle icone, sfoglia le pagine con uno swipe.
 
 ## Funzionalità (v1)
 
-- **Hotkey globale** per mostrare/nascondere il launcher. Default: **⌥ + Spazio**.
+- **Hotkey globale** per mostrare/nascondere il launcher. Default: **⌃⌥⌘ + Spazio**
+  (Ctrl + Opzione + Cmd + Spazio).
 - **Finestra floating ridimensionabile** (a differenza di Launchpad).
 - **Scansione ricorsiva** delle app in `/Applications`, `/System/Applications`,
   `/System/Library/CoreServices/Applications` e `~/Applications`, comprese le
@@ -36,7 +37,7 @@ densità e dimensioni delle icone, sfoglia le pagine con uno swipe.
 1. Apri `Apposto.xcodeproj` con Xcode.
 2. Seleziona lo schema **Apposto** e premi **⌘R**.
 3. Al primo avvio l'app non mostra finestre: comparirà solo l'icona nella
-   **barra dei menu** (una griglia 3×3). Premi **⌥ + Spazio** per aprire il
+   **barra dei menu** (una griglia 3×3). Premi **⌃⌥⌘ + Spazio** per aprire il
    launcher.
 
 > **Firma**: per l'uso locale Xcode firma automaticamente l'app ("Sign to Run

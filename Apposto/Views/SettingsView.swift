@@ -37,7 +37,7 @@ struct SettingsView: View {
             }
 
             Section("Scorciatoia") {
-                Text("Premi ⌥ + Spazio per aprire o chiudere Apposto.")
+                Text("Premi ⌃ ⌥ ⌘ + Spazio per aprire o chiudere Apposto.")
                     .foregroundStyle(.secondary)
             }
         }

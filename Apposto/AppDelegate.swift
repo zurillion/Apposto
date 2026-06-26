@@ -93,8 +93,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         HotKeyManager.shared.onHotKey = { [weak self] in
             DispatchQueue.main.async { self?.toggleLauncher() }
         }
-        // Default: ⌥ + Spazio.
-        HotKeyManager.shared.register(keyCode: UInt32(kVK_Space), modifiers: UInt32(optionKey))
+        // Default: ⌃⌥⌘ + Spazio (Ctrl + Opzione + Cmd + Spazio).
+        // In futuro questa combinazione sarà configurabile dalle Preferenze.
+        HotKeyManager.shared.register(
+            keyCode: UInt32(kVK_Space),
+            modifiers: UInt32(controlKey | optionKey | cmdKey)
+        )
     }
 
     // MARK: - Monitor eventi (ESC + swipe trackpad)
