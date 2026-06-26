@@ -6,6 +6,10 @@
 	objectVersion = 70;
 	objects = {
 
+/* Begin PBXFileReference section */
+		ABCDEF000000000000000004 /* Apposto.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Apposto.app; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		ABCDEF000000000000000002 /* Apposto */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Apposto; sourceTree = "<group>"; };
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -32,6 +36,7 @@
 		ABCDEF000000000000000003 /* Products */ = {
 			isa = PBXGroup;
 			children = (
+				ABCDEF000000000000000004 /* Apposto.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -58,6 +63,7 @@
 			packageProductDependencies = (
 			);
 			productName = Apposto;
+			productReference = ABCDEF000000000000000004 /* Apposto.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
