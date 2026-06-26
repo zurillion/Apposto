@@ -5,6 +5,10 @@ import AppKit
 /// Come Launchpad, la ricerca è ricorsiva nelle sottocartelle (es.
 /// `/Applications/Utilities`), ma i bundle `.app` sono trattati come foglie:
 /// l'opzione `.skipsPackageDescendants` evita di entrare dentro i bundle.
+///
+/// La scansione produce solo i **metadati** (nome, percorso, bundle id): le
+/// icone, che sono la parte costosa, vengono caricate a parte e pigramente da
+/// `IconLoader`, così la lista è pronta in fretta e l'app resta reattiva.
 enum AppScanner {
 
     /// Cartelle in cui cercare. L'ordine determina quale copia "vince" in caso
@@ -23,7 +27,9 @@ enum AppScanner {
         return roots
     }
 
-    static func scan() -> [AppItem] {
+    /// Esegue la scansione (pensata per girare in background) e restituisce gli
+    /// `AppItem` ordinati per nome, senza icone.
+    static func scanMetadata() -> [AppItem] {
         let fm = FileManager.default
         let keys: [URLResourceKey] = [.isApplicationKey, .localizedNameKey, .isDirectoryKey]
         let keySet = Set(keys)
@@ -47,8 +53,7 @@ enum AppScanner {
                 // altrimenti ci fidiamo dell'estensione .app.
                 if let isApp = values?.isApplication, isApp == false { continue }
 
-                let bundle = Bundle(url: url)
-                let bundleID = bundle?.bundleIdentifier
+                let bundleID = Bundle(url: url)?.bundleIdentifier
                 let dedupKey = bundleID ?? url.path
                 guard !seen.contains(dedupKey) else { continue }
                 seen.insert(dedupKey)
@@ -56,12 +61,10 @@ enum AppScanner {
                 let rawName = values?.localizedName ?? fm.displayName(atPath: url.path)
                 let name = rawName.hasSuffix(".app") ? String(rawName.dropLast(4)) : rawName
 
-                let icon = NSWorkspace.shared.icon(forFile: url.path)
                 items.append(AppItem(id: dedupKey,
                                      name: name,
                                      url: url,
-                                     bundleIdentifier: bundleID,
-                                     icon: icon))
+                                     bundleIdentifier: bundleID))
             }
         }
 

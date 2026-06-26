@@ -68,8 +68,10 @@ Apposto/
 ├─ AppostoApp.swift            # @main, scena Settings
 ├─ AppDelegate.swift           # hotkey, status item, monitor ESC/swipe, pannello
 ├─ Models/
-│  ├─ AppItem.swift            # modello di una app (nome, url, icona)
-│  ├─ AppScanner.swift         # scansione ricorsiva delle cartelle app
+│  ├─ AppItem.swift            # modello di una app (icona caricata pigramente)
+│  ├─ AppScanner.swift         # scansione ricorsiva (solo metadati)
+│  ├─ AppCache.swift           # cache su disco dei metadati (avvio istantaneo)
+│  ├─ IconLoader.swift         # caricamento icone asincrono + cache in memoria
 │  ├─ AppModel.swift           # stato condiviso + azioni (reload/launch)
 │  └─ LauncherSettings.swift   # impostazioni persistite in UserDefaults
 ├─ HotKey/
@@ -99,6 +101,13 @@ Apposto/
   reattivo via Combine.
 - La **visibilità nel Dock** è gestita a runtime con
   `NSApp.setActivationPolicy(.regular/.accessory)` in base all'impostazione.
+- **Caricamento app**: la scansione produce solo metadati (veloce, in
+  background) e li salva in cache su disco, così all'avvio la lista compare
+  subito mentre una nuova scansione la aggiorna. Le **icone** sono caricate
+  pigramente e in modo asincrono (`IconLoader`), per non bloccare l'interfaccia.
+- **Preferenze**: il launcher resta visibile sotto la finestra Preferenze
+  (livello abbassato a `.normal`) e si aggiorna in tempo reale; l'auto-hide
+  scatta solo quando si passa a un'altra app (`applicationDidResignActive`).
 
 ## Roadmap (idee per le prossime iterazioni)
 

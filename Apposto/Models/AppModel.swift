@@ -21,15 +21,44 @@ final class AppModel: ObservableObject {
     /// di un'app). Impostata dall'`AppDelegate`.
     var onRequestClose: (() -> Void)?
 
+    /// Caricamento iniziale: mostra subito le app dalla cache (se presente) e
+    /// avvia in background una scansione aggiornata.
+    func loadInitial() {
+        let cached = AppCache.load()
+        if !cached.isEmpty {
+            apps = cached
+        }
+        reload()
+    }
+
+    /// Ri-scansiona le app in background e aggiorna la lista + la cache,
+    /// senza bloccare l'interfaccia.
     func reload() {
-        isLoading = true
+        if apps.isEmpty { isLoading = true }
         DispatchQueue.global(qos: .userInitiated).async {
-            let items = AppScanner.scan()
+            let items = AppScanner.scanMetadata()
+            AppCache.save(items)
             DispatchQueue.main.async {
-                self.apps = items
+                self.apply(items)
                 self.isLoading = false
             }
         }
+    }
+
+    /// Sostituisce la lista conservando le icone già caricate (per stesso id),
+    /// così l'aggiornamento in background non provoca sfarfallii.
+    private func apply(_ items: [AppItem]) {
+        let existingIcons = Dictionary(
+            apps.compactMap { item -> (String, NSImage)? in
+                guard let icon = item.icon else { return nil }
+                return (item.id, icon)
+            },
+            uniquingKeysWith: { current, _ in current }
+        )
+        for item in items where item.icon == nil {
+            item.icon = existingIcons[item.id]
+        }
+        apps = items
     }
 
     func launch(_ app: AppItem) {

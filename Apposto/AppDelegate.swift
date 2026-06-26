@@ -6,7 +6,7 @@ import Carbon.HIToolbox
 /// Coordina il ciclo di vita dell'app: crea il pannello floating, registra
 /// l'hotkey globale, installa l'icona nella barra dei menu e i monitor degli
 /// eventi (ESC e swipe del trackpad).
-final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate {
     let model = AppModel()
     let settings = LauncherSettings()
 
@@ -15,6 +15,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var scrollMonitor: Any?
     private var keyMonitor: Any?
     private var cancellables = Set<AnyCancellable>()
+
+    // Stato delle Preferenze (per gestire livello finestra e auto-hide).
+    private var settingsIsOpen = false
+    private var launcherWasVisibleBeforeSettings = false
 
     // Stato di accumulo per lo swipe orizzontale del trackpad.
     private var scrollAccum: CGFloat = 0
@@ -25,15 +29,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             .environmentObject(model)
             .environmentObject(settings)
         windowController = LauncherWindowController(rootView: AnyView(root))
-        windowController.panel.delegate = self
 
         model.onRequestClose = { [weak self] in self?.hideLauncher() }
-        model.reload()
+        model.loadInitial()
 
         setupStatusItem()
         setupBindings()
         setupEventMonitors()
-        setupActivationPolicyRestore()
+        setupSettingsObservers()
 
         // Primo avvio: mostra subito il launcher per dare un riscontro visibile.
         showLauncher()
@@ -79,11 +82,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         NSApp.activate(ignoringOtherApps: true)
     }
 
-    // MARK: - Auto-nascondi quando il pannello perde il focus
+    // MARK: - Auto-nascondi quando si passa a un'altra app
 
-    func windowDidResignKey(_ notification: Notification) {
-        guard let window = notification.object as? NSWindow,
-              window == windowController.panel else { return }
+    func applicationDidResignActive(_ notification: Notification) {
+        // Il launcher si chiude passando a un'altra app, ma resta visibile se
+        // l'utente apre una finestra della stessa app (es. Preferenze).
         hideLauncher()
     }
 
@@ -163,19 +166,53 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         }
     }
 
-    /// Torna ad app accessory (niente icona nel Dock) quando la finestra
-    /// Preferenze viene chiusa — è l'unica finestra "normale" dell'app.
-    private func setupActivationPolicyRestore() {
-        NotificationCenter.default.addObserver(
-            forName: NSWindow.willCloseNotification,
-            object: nil,
-            queue: .main
-        ) { [weak self] note in
+    // MARK: - Preferenze (livello finestra + ripristino policy)
+
+    /// Osserva apertura/chiusura della finestra Preferenze per: tenere il
+    /// launcher visibile sotto di essa (abbassandone il livello) e ripristinare
+    /// la activation policy alla chiusura.
+    private func setupSettingsObservers() {
+        let center = NotificationCenter.default
+        center.addObserver(forName: NSWindow.didBecomeKeyNotification,
+                           object: nil, queue: .main) { [weak self] note in
             guard let self,
-                  let closing = note.object as? NSWindow,
-                  closing != self.windowController.panel else { return }
-            _ = NSApp.setActivationPolicy(self.settings.showInDock ? .regular : .accessory)
+                  let window = note.object as? NSWindow,
+                  !(window is LauncherPanel),
+                  window.styleMask.contains(.titled) else { return }
+            self.settingsWindowDidOpen()
         }
+        center.addObserver(forName: NSWindow.willCloseNotification,
+                           object: nil, queue: .main) { [weak self] note in
+            guard let self,
+                  let window = note.object as? NSWindow,
+                  !(window is LauncherPanel),
+                  window.styleMask.contains(.titled) else { return }
+            self.settingsWindowDidClose()
+        }
+    }
+
+    private func settingsWindowDidOpen() {
+        guard !settingsIsOpen else { return }
+        settingsIsOpen = true
+        launcherWasVisibleBeforeSettings = windowController.isVisible
+        // Le Preferenze devono stare sopra: abbassiamo il livello del pannello.
+        windowController.panel.level = .normal
+        // Mostriamo il launcher (senza rubare il focus alle Preferenze) per far
+        // vedere le modifiche in tempo reale.
+        if !windowController.isVisible {
+            windowController.positionOnActiveScreen()
+            windowController.panel.orderFront(nil)
+        }
+    }
+
+    private func settingsWindowDidClose() {
+        guard settingsIsOpen else { return }
+        settingsIsOpen = false
+        windowController.panel.level = .floating
+        if !launcherWasVisibleBeforeSettings {
+            hideLauncher()
+        }
+        _ = NSApp.setActivationPolicy(settings.showInDock ? .regular : .accessory)
     }
 
     /// Converte uno swipe orizzontale a due dita in cambio pagina, con

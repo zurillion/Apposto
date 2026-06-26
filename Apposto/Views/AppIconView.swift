@@ -1,9 +1,9 @@
 import SwiftUI
 
 /// Singola cella: icona dell'app più nome opzionale, con evidenziazione al
-/// passaggio del mouse.
+/// passaggio del mouse. L'icona è caricata pigramente alla comparsa.
 struct AppIconView: View {
-    let app: AppItem
+    @ObservedObject var app: AppItem
     let iconSize: Double
     let showLabel: Bool
 
@@ -11,10 +11,7 @@ struct AppIconView: View {
 
     var body: some View {
         VStack(spacing: 6) {
-            Image(nsImage: app.icon)
-                .resizable()
-                .interpolation(.high)
-                .aspectRatio(contentMode: .fit)
+            iconView
                 .frame(width: iconSize, height: iconSize)
 
             if showLabel {
@@ -35,5 +32,27 @@ struct AppIconView: View {
         .contentShape(RoundedRectangle(cornerRadius: 14))
         .onHover { hovering = $0 }
         .help(app.name)
+        .onAppear(perform: loadIconIfNeeded)
+    }
+
+    @ViewBuilder
+    private var iconView: some View {
+        if let icon = app.icon {
+            Image(nsImage: icon)
+                .resizable()
+                .interpolation(.high)
+                .aspectRatio(contentMode: .fit)
+        } else {
+            // Segnaposto discreto finché l'icona non è pronta.
+            RoundedRectangle(cornerRadius: iconSize * 0.2)
+                .fill(Color.primary.opacity(0.08))
+        }
+    }
+
+    private func loadIconIfNeeded() {
+        guard app.icon == nil else { return }
+        IconLoader.shared.icon(for: app.url) { [weak app] image in
+            app?.icon = image
+        }
     }
 }

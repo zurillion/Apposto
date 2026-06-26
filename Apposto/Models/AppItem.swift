@@ -1,25 +1,25 @@
 import AppKit
+import Combine
 
 /// Rappresenta una singola applicazione individuata sul disco.
 ///
-/// È una classe (tipo riferimento) così l'`NSImage` dell'icona viene
-/// condivisa senza copie. L'identità è data dal bundle identifier (o, in sua
-/// assenza, dal percorso del bundle).
-final class AppItem: Identifiable, Hashable {
+/// È un `ObservableObject` così l'icona — caricata pigramente e in modo
+/// asincrono — può aggiornare la cella senza ridisegnare l'intera griglia.
+/// L'identità è data dal bundle identifier (o, in sua assenza, dal percorso).
+final class AppItem: ObservableObject, Identifiable {
     let id: String
     let name: String
     let url: URL
     let bundleIdentifier: String?
-    let icon: NSImage
 
-    init(id: String, name: String, url: URL, bundleIdentifier: String?, icon: NSImage) {
+    /// Icona dell'app. `nil` finché non viene caricata da `IconLoader`.
+    @Published var icon: NSImage?
+
+    init(id: String, name: String, url: URL, bundleIdentifier: String?, icon: NSImage? = nil) {
         self.id = id
         self.name = name
         self.url = url
         self.bundleIdentifier = bundleIdentifier
         self.icon = icon
     }
-
-    static func == (lhs: AppItem, rhs: AppItem) -> Bool { lhs.id == rhs.id }
-    func hash(into hasher: inout Hasher) { hasher.combine(id) }
 }
