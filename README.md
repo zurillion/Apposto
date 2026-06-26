@@ -95,6 +95,9 @@ Apposto/
 ## Roadmap (idee per le prossime iterazioni)
 
 - Hotkey configurabile dalle Preferenze (con "registratore" di scorciatoia).
+- Opzione per normalizzare la direzione dello swipe del trackpad in base alla
+  preferenza di sistema "scorrimento naturale" (oggi si segue sempre quella
+  di sistema; il trascinamento col mouse usa invece la direzione fisica).
 - Cartelle/gruppi e riordino manuale delle icone (drag & drop).
 - Navigazione completa da tastiera (frecce per selezione, Invio per avviare).
 - Scansione anche via Spotlight (`NSMetadataQuery`) per trovare app ovunque.

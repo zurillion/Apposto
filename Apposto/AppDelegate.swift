@@ -5,7 +5,7 @@ import Carbon.HIToolbox
 /// Coordina il ciclo di vita dell'app: crea il pannello floating, registra
 /// l'hotkey globale, installa l'icona nella barra dei menu e i monitor degli
 /// eventi (ESC e swipe del trackpad).
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     let model = AppModel()
     let settings = LauncherSettings()
 
@@ -23,6 +23,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             .environmentObject(model)
             .environmentObject(settings)
         windowController = LauncherWindowController(rootView: AnyView(root))
+        windowController.panel.delegate = self
 
         model.onRequestClose = { [weak self] in self?.hideLauncher() }
         model.reload()
@@ -30,6 +31,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         setupStatusItem()
         setupHotKey()
         setupEventMonitors()
+        setupActivationPolicyRestore()
     }
 
     // Mantiene l'app viva anche quando la finestra Preferenze viene chiusa.
@@ -46,18 +48,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         windowController.positionOnActiveScreen()
         activateApp()
         windowController.panel.makeKeyAndOrderFront(nil)
+        // Per un'app accessory l'attivazione può non essere ancora completa in
+        // questo giro di runloop: rinforziamo lo stato "key" al tick successivo
+        // così la barra di ricerca riceve subito l'input da tastiera.
+        DispatchQueue.main.async { [weak self] in
+            guard let self, self.windowController.isVisible else { return }
+            self.windowController.panel.makeKey()
+        }
     }
 
     private func hideLauncher() {
         windowController.panel.orderOut(nil)
     }
 
+    /// Per un launcher (app accessory) `ignoringOtherApps: true` è più
+    /// affidabile dell'attivazione cooperativa di macOS 14, che è asincrona e
+    /// può lasciare il pannello senza focus da tastiera.
     private func activateApp() {
-        if #available(macOS 14.0, *) {
-            NSApp.activate()
-        } else {
-            NSApp.activate(ignoringOtherApps: true)
-        }
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    // MARK: - Auto-nascondi quando il pannello perde il focus
+
+    func windowDidResignKey(_ notification: Notification) {
+        guard let window = notification.object as? NSWindow,
+              window == windowController.panel else { return }
+        hideLauncher()
     }
 
     // MARK: - Icona barra dei menu
@@ -77,7 +93,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func openSettings() {
-        activateApp()
+        // Un'app accessory non porterebbe in primo piano una finestra normale:
+        // passiamo temporaneamente a .regular per mostrare le Preferenze a
+        // fuoco; torniamo a .accessory alla chiusura (vedi observer).
+        NSApp.setActivationPolicy(.regular)
+        NSApp.activate(ignoringOtherApps: true)
         if #available(macOS 14.0, *) {
             NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
         } else {
@@ -120,9 +140,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    /// Torna ad app accessory (niente icona nel Dock) quando la finestra
+    /// Preferenze viene chiusa — è l'unica finestra "normale" dell'app.
+    private func setupActivationPolicyRestore() {
+        NotificationCenter.default.addObserver(
+            forName: NSWindow.willCloseNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] note in
+            guard let self,
+                  let closing = note.object as? NSWindow,
+                  closing != self.windowController.panel else { return }
+            NSApp.setActivationPolicy(.accessory)
+        }
+    }
+
     /// Converte uno swipe orizzontale a due dita in cambio pagina, con
     /// accumulo per gesto in modo da scattare una sola volta per swipe.
     private func handleScroll(_ event: NSEvent) {
+        // Ignora gli eventi di inerzia (momentum) successivi al sollevamento
+        // delle dita: appartengono allo stesso swipe e altrimenti potrebbero
+        // far scattare un secondo cambio pagina.
+        guard event.momentumPhase.isEmpty else { return }
+
         let phase = event.phase
         if phase.contains(.began) {
             scrollAccum = 0
