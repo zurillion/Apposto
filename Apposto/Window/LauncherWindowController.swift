@@ -32,7 +32,11 @@ final class LauncherWindowController {
         panel.backgroundColor = .clear
         panel.hasShadow = true
         panel.level = .floating
-        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .moveToActiveSpace]
+        // Nota: .canJoinAllSpaces e .moveToActiveSpace si escludono a vicenda
+        // (AppKit lancia un'eccezione se presenti entrambi). Usiamo
+        // .canJoinAllSpaces così il pannello è disponibile su ogni Spazio, e
+        // .fullScreenAuxiliary per mostrarlo sopra le app a tutto schermo.
+        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         panel.isReleasedWhenClosed = false
         panel.hidesOnDeactivate = false
         panel.animationBehavior = .none
