@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import Combine
 import Carbon.HIToolbox
 
 /// Coordina il ciclo di vita dell'app: crea il pannello floating, registra
@@ -13,6 +14,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var statusItem: NSStatusItem!
     private var scrollMonitor: Any?
     private var keyMonitor: Any?
+    private var cancellables = Set<AnyCancellable>()
 
     // Stato di accumulo per lo swipe orizzontale del trackpad.
     private var scrollAccum: CGFloat = 0
@@ -29,13 +31,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         model.reload()
 
         setupStatusItem()
-        setupHotKey()
+        setupBindings()
         setupEventMonitors()
         setupActivationPolicyRestore()
+
+        // Primo avvio: mostra subito il launcher per dare un riscontro visibile.
+        showLauncher()
     }
 
     // Mantiene l'app viva anche quando la finestra Preferenze viene chiusa.
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
+
+    // Click sull'icona nel Dock: riapre il launcher.
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        showLauncher()
+        return true
+    }
 
     // MARK: - Visibilità del launcher
 
@@ -96,7 +107,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         // Un'app accessory non porterebbe in primo piano una finestra normale:
         // passiamo temporaneamente a .regular per mostrare le Preferenze a
         // fuoco; torniamo a .accessory alla chiusura (vedi observer).
-        NSApp.setActivationPolicy(.regular)
+        _ = NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
         if #available(macOS 14.0, *) {
             NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
@@ -107,18 +118,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     @objc private func quit() { NSApp.terminate(nil) }
 
-    // MARK: - Hotkey globale
+    // MARK: - Binding impostazioni (scorciatoia + Dock)
 
-    private func setupHotKey() {
+    /// Collega le impostazioni osservabili ai loro effetti: la scorciatoia
+    /// globale viene (ri)registrata e la visibilità nel Dock aggiornata ogni
+    /// volta che cambiano dalle Preferenze. Entrambi i `sink` scattano subito
+    /// con i valori correnti, applicando così lo stato iniziale.
+    private func setupBindings() {
         HotKeyManager.shared.onHotKey = { [weak self] in
             DispatchQueue.main.async { self?.toggleLauncher() }
         }
-        // Default: ⌃⌥⌘ + Spazio (Ctrl + Opzione + Cmd + Spazio).
-        // In futuro questa combinazione sarà configurabile dalle Preferenze.
-        HotKeyManager.shared.register(
-            keyCode: UInt32(kVK_Space),
-            modifiers: UInt32(controlKey | optionKey | cmdKey)
-        )
+
+        settings.$hotKeyCode
+            .combineLatest(settings.$hotKeyModifiers)
+            .sink { code, modifiers in
+                HotKeyManager.shared.register(keyCode: UInt32(code),
+                                              modifiers: UInt32(modifiers))
+            }
+            .store(in: &cancellables)
+
+        settings.$showInDock
+            .sink { show in
+                _ = NSApp.setActivationPolicy(show ? .regular : .accessory)
+            }
+            .store(in: &cancellables)
     }
 
     // MARK: - Monitor eventi (ESC + swipe trackpad)
@@ -151,7 +174,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             guard let self,
                   let closing = note.object as? NSWindow,
                   closing != self.windowController.panel else { return }
-            NSApp.setActivationPolicy(.accessory)
+            _ = NSApp.setActivationPolicy(self.settings.showInDock ? .regular : .accessory)
         }
     }
 

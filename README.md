@@ -36,9 +36,11 @@ densità e dimensioni delle icone, sfoglia le pagine con uno swipe.
 
 1. Apri `Apposto.xcodeproj` con Xcode.
 2. Seleziona lo schema **Apposto** e premi **⌘R**.
-3. Al primo avvio l'app non mostra finestre: comparirà solo l'icona nella
-   **barra dei menu** (una griglia 3×3). Premi **⌃⌥⌘ + Spazio** per aprire il
-   launcher.
+3. All'avvio compaiono l'**icona nel Dock** (disattivabile dalle Preferenze) e
+   quella nella **barra dei menu** (una griglia 3×3); il launcher si apre
+   subito. Da quel momento usi **⌃⌥⌘ + Spazio** (scorciatoia di default,
+   modificabile dalle Preferenze) per mostrarlo/nasconderlo, oppure clicchi
+   l'icona nel Dock.
 
 > **Firma**: per l'uso locale Xcode firma automaticamente l'app ("Sign to Run
 > Locally"), non serve un Apple Developer Team. Per distribuirla, imposta il tuo
@@ -51,6 +53,9 @@ densità e dimensioni delle icone, sfoglia le pagine con uno swipe.
 
 Apri le Preferenze dalla voce di menu della barra dei menu, o con **⌘,**:
 
+- **Mostra icona nel Dock** (attiva di default).
+- **Scorciatoia**: clicca il pulsante e premi la nuova combinazione (serve
+  almeno un modificatore ⌃ ⌥ ⇧ ⌘; Esc annulla; "Ripristina" torna al default).
 - **Dimensione icona** e **Spaziatura** (slider).
 - **Mostra i nomi** sotto le icone (on/off).
 - **Colonne**: `Auto` (si adatta alla larghezza) oppure un numero fisso.
@@ -78,6 +83,7 @@ Apposto/
    ├─ AppIconView.swift
    ├─ PageIndicator.swift      # pallini
    ├─ VisualEffectBackground.swift  # vibrancy
+   ├─ ShortcutRecorder.swift   # registratore di scorciatoia + formatter
    └─ SettingsView.swift
 ```
 
@@ -88,13 +94,14 @@ Apposto/
 - Lo **swipe orizzontale** del trackpad è intercettato da un monitor locale
   `NSEvent` (`.scrollWheel`) nell'`AppDelegate`, più affidabile del routing
   degli eventi scroll in SwiftUI.
-- Per cambiare la **hotkey** di default modifica la riga in `setupHotKey()`
-  (`AppDelegate.swift`), usando i virtual key code di `Carbon.HIToolbox` e le
-  maschere `cmdKey`/`optionKey`/`shiftKey`/`controlKey`.
+- La **scorciatoia** è configurabile dalle Preferenze tramite `ShortcutRecorder`
+  e persistita in `LauncherSettings`; l'`AppDelegate` la (ri)registra in modo
+  reattivo via Combine.
+- La **visibilità nel Dock** è gestita a runtime con
+  `NSApp.setActivationPolicy(.regular/.accessory)` in base all'impostazione.
 
 ## Roadmap (idee per le prossime iterazioni)
 
-- Hotkey configurabile dalle Preferenze (con "registratore" di scorciatoia).
 - Opzione per normalizzare la direzione dello swipe del trackpad in base alla
   preferenza di sistema "scorrimento naturale" (oggi si segue sempre quella
   di sistema; il trascinamento col mouse usa invece la direzione fisica).

@@ -1,13 +1,30 @@
 import SwiftUI
 
-/// Finestra Preferenze: regola dimensione icone, spaziatura, etichette e
-/// colonne, e permette di ricaricare l'elenco delle app.
+/// Finestra Preferenze: scorciatoia, visibilità nel Dock, aspetto della
+/// griglia e ricarica dell'elenco app.
 struct SettingsView: View {
     @EnvironmentObject var settings: LauncherSettings
     @EnvironmentObject var model: AppModel
 
     var body: some View {
         Form {
+            Section("Generale") {
+                Toggle("Mostra icona nel Dock", isOn: $settings.showInDock)
+            }
+
+            Section("Scorciatoia") {
+                HStack {
+                    Text("Apri / chiudi Apposto")
+                    Spacer()
+                    ShortcutRecorder(keyCode: $settings.hotKeyCode,
+                                     carbonModifiers: $settings.hotKeyModifiers)
+                    Button("Ripristina") { settings.resetHotKey() }
+                }
+                Text("Clicca il pulsante e premi la nuova combinazione (servono uno o più tasti ⌃ ⌥ ⇧ ⌘). Esc per annullare.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
             Section("Aspetto icone") {
                 LabeledSlider(title: "Dimensione", value: $settings.iconSize,
                               range: 32...160, step: 4, unit: "px")
@@ -35,14 +52,9 @@ struct SettingsView: View {
                     Button("Ricarica") { model.reload() }
                 }
             }
-
-            Section("Scorciatoia") {
-                Text("Premi ⌃ ⌥ ⌘ + Spazio per aprire o chiudere Apposto.")
-                    .foregroundStyle(.secondary)
-            }
         }
         .padding(20)
-        .frame(width: 460, height: 470)
+        .frame(width: 480, height: 560)
     }
 }
 

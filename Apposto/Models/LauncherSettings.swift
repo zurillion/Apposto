@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import Carbon.HIToolbox
 
 /// Impostazioni dell'utente, persistite in `UserDefaults`.
 ///
@@ -12,6 +13,15 @@ final class LauncherSettings: ObservableObject {
         static let spacing = "spacing"
         static let showLabels = "showLabels"
         static let columns = "columnsOverride"
+        static let showInDock = "showInDock"
+        static let hotKeyCode = "hotKeyCode"
+        static let hotKeyModifiers = "hotKeyModifiers"
+    }
+
+    /// Valori di default della scorciatoia globale: ⌃⌥⌘ + Spazio.
+    enum HotKeyDefault {
+        static let code = Int(kVK_Space)                       // 49
+        static let modifiers = controlKey | optionKey | cmdKey // maschera Carbon
     }
 
     private let defaults = UserDefaults.standard
@@ -28,10 +38,28 @@ final class LauncherSettings: ObservableObject {
     /// Numero di colonne fisso. `0` = adatta automaticamente alla larghezza.
     @Published var columnsOverride: Int { didSet { defaults.set(columnsOverride, forKey: Keys.columns) } }
 
+    /// Mostra l'icona nel Dock (app normale) oppure solo nella barra dei menu.
+    @Published var showInDock: Bool { didSet { defaults.set(showInDock, forKey: Keys.showInDock) } }
+
+    /// Virtual key code della scorciatoia globale.
+    @Published var hotKeyCode: Int { didSet { defaults.set(hotKeyCode, forKey: Keys.hotKeyCode) } }
+
+    /// Maschera dei modificatori Carbon della scorciatoia globale.
+    @Published var hotKeyModifiers: Int { didSet { defaults.set(hotKeyModifiers, forKey: Keys.hotKeyModifiers) } }
+
     init() {
         iconSize = (defaults.object(forKey: Keys.iconSize) as? Double) ?? 72
         spacing = (defaults.object(forKey: Keys.spacing) as? Double) ?? 24
         showLabels = (defaults.object(forKey: Keys.showLabels) as? Bool) ?? true
         columnsOverride = (defaults.object(forKey: Keys.columns) as? Int) ?? 0
+        showInDock = (defaults.object(forKey: Keys.showInDock) as? Bool) ?? true
+        hotKeyCode = (defaults.object(forKey: Keys.hotKeyCode) as? Int) ?? HotKeyDefault.code
+        hotKeyModifiers = (defaults.object(forKey: Keys.hotKeyModifiers) as? Int) ?? HotKeyDefault.modifiers
+    }
+
+    /// Riporta la scorciatoia al valore di default.
+    func resetHotKey() {
+        hotKeyModifiers = HotKeyDefault.modifiers
+        hotKeyCode = HotKeyDefault.code
     }
 }
