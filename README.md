@@ -26,7 +26,10 @@ densità e dimensioni delle icone, sfoglia le pagine con uno swipe.
   premi Invio per avviare il primo risultato.
 - **Pagine con indicatore a pallini**; si cambia pagina con swipe del trackpad,
   trascinamento, frecce **← →**, o cliccando i pallini.
-- **App "agent"**: nessuna icona nel Dock, vive nella barra dei menu.
+- **Conteggio app** in alto a destra (filtrate quando cerchi, totale altrimenti).
+- **⌘R** mostra l'app sotto il puntatore nel **Finder**; **⌘I** ne apre le
+  **Informazioni** (richiede il permesso di automazione del Finder al primo uso).
+- **Preferenze a tab**: Generale, Aspetto, Sinonimi.
 
 ### Tag (Fase 1)
 

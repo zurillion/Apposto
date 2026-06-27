@@ -46,7 +46,14 @@ struct AppIconView: View {
                 .strokeBorder(settings.theme.color, lineWidth: isSelected ? 2 : 0)
         )
         .contentShape(RoundedRectangle(cornerRadius: 14))
-        .onHover { hovering = $0 }
+        .onHover { inside in
+            hovering = inside
+            if inside {
+                model.hoveredAppID = app.id
+            } else if model.hoveredAppID == app.id {
+                model.hoveredAppID = nil
+            }
+        }
         .onTapGesture { handleLeftClick() }
         .overlay(RightClickCatcher { model.openTagEditor(anchor: app) })
         .help(app.name)

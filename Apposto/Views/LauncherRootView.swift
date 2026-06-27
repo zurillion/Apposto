@@ -33,7 +33,7 @@ struct LauncherRootView: View {
     var body: some View {
         let visible = displayedApps
         return VStack(spacing: 0) {
-            sortBar
+            sortBar(count: visible.count)
                 .padding(.horizontal, 24)
                 .padding(.top, 14)
 
@@ -135,10 +135,10 @@ struct LauncherRootView: View {
 
     // MARK: - Barra di ordinamento
 
-    /// Controllo segmentato: il campo attivo mostra la freccia di direzione e,
-    /// ricliccandolo, inverte l'ordine.
-    private var sortBar: some View {
-        HStack {
+    /// Controllo segmentato (il campo attivo mostra la freccia di direzione e,
+    /// ricliccandolo, inverte l'ordine) e, a destra, il numero di app mostrate.
+    private func sortBar(count: Int) -> some View {
+        HStack(spacing: 12) {
             HStack(spacing: 4) {
                 ForEach(SortField.allCases, id: \.self) { field in
                     sortSegment(field)
@@ -149,6 +149,11 @@ struct LauncherRootView: View {
             .frame(maxWidth: 360)
 
             Spacer(minLength: 0)
+
+            Text("\(count) app")
+                .font(.system(size: 12))
+                .foregroundStyle(.secondary)
+                .monospacedDigit()
         }
     }
 

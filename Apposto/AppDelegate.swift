@@ -84,6 +84,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.activate(ignoringOtherApps: true)
     }
 
+    /// Apre la finestra Informazioni del Finder per l'app indicata (richiede il
+    /// permesso di automazione del Finder, chiesto al primo utilizzo).
+    private func showGetInfo(for url: URL) {
+        let escaped = url.path
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "\"", with: "\\\"")
+        let source = """
+        tell application "Finder"
+            activate
+            open information window of (POSIX file "\(escaped)" as alias)
+        end tell
+        """
+        var error: NSDictionary?
+        NSAppleScript(source: source)?.executeAndReturnError(&error)
+    }
+
     // MARK: - Auto-nascondi quando si passa a un'altra app
 
     func applicationDidResignActive(_ notification: Notification) {
@@ -157,15 +173,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             // Con l'editor dei tag aperto, lascia passare i tasti (Esc chiude il
             // popover, le frecce muovono il cursore nel campo).
             if self.model.isTagEditorOpen { return event }
+
+            let flags = event.modifierFlags
+            // ⌘R: mostra nel Finder; ⌘I: Informazioni — sull'app sotto il puntatore.
+            if flags.contains(.command),
+               let id = self.model.hoveredAppID,
+               let app = self.model.apps.first(where: { $0.id == id }) {
+                switch Int(event.keyCode) {
+                case kVK_ANSI_R:
+                    NSWorkspace.shared.activateFileViewerSelecting([app.url])
+                    return nil
+                case kVK_ANSI_I:
+                    self.showGetInfo(for: app.url)
+                    return nil
+                default:
+                    break
+                }
+            }
+
             switch event.keyCode {
             case 53: // Esc
                 self.hideLauncher()
                 return nil
-            case 123: // freccia sinistra → pagina precedente
-                self.model.stepPage(-1)
+            case 123 where !flags.contains(.command) && !flags.contains(.option):
+                self.model.stepPage(-1) // freccia sinistra → pagina precedente
                 return nil
-            case 124: // freccia destra → pagina successiva
-                self.model.stepPage(1)
+            case 124 where !flags.contains(.command) && !flags.contains(.option):
+                self.model.stepPage(1)  // freccia destra → pagina successiva
                 return nil
             default:
                 return event

@@ -35,6 +35,10 @@ final class AppModel: ObservableObject {
     /// intervallo con Shift). Aggiornato dalla vista radice.
     var visibleAppIDs: [String] = []
 
+    /// App attualmente sotto il puntatore (per ⌘R / ⌘I). Volutamente NON
+    /// @Published: non deve ridisegnare la griglia a ogni movimento del mouse.
+    var hoveredAppID: String?
+
     /// Ancora della selezione: la prima app selezionata, da cui parte il range.
     private var selectionAnchorID: String?
 
@@ -196,5 +200,6 @@ final class AppModel: ObservableObject {
         resetToken &+= 1
         clearSelection()
         closeTagEditor()
+        hoveredAppID = nil
     }
 }
