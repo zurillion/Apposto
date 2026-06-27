@@ -26,7 +26,7 @@ struct AppIconView: View {
             iconView
                 .frame(width: iconSize, height: iconSize)
                 .overlay(alignment: .topTrailing) { tagIndicator }
-                .overlay(alignment: .bottom) { intelBadge }
+                .overlay(alignment: .bottomLeading) { intelBadge }
 
             if showLabel {
                 VStack(spacing: 1) {
@@ -39,7 +39,7 @@ struct AppIconView: View {
                     if settings.showOriginalName, let original = app.originalName {
                         Text(original)
                             .font(.system(size: 10))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color(red: 0.87, green: 0.78, blue: 0.45))
                             .lineLimit(1)
                             .truncationMode(.tail)
                     }
@@ -101,9 +101,9 @@ struct AppIconView: View {
                 .foregroundStyle(.white)
                 .padding(.horizontal, 5)
                 .padding(.vertical, 1.5)
-                .background(Capsule().fill(Color.black.opacity(0.6)))
-                .overlay(Capsule().strokeBorder(Color.white.opacity(0.25), lineWidth: 0.5))
-                .offset(y: -4)
+                .background(Capsule().fill(Color(red: 0.16, green: 0.62, blue: 0.32)))
+                .overlay(Capsule().strokeBorder(Color.white.opacity(0.30), lineWidth: 0.5))
+                .offset(x: 2, y: -4)
         }
     }
 
