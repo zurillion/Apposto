@@ -94,7 +94,7 @@ def build():
     # Pollice: esce dal lato sinistro-alto del palmo e scende DIETRO la tile.
     # Più sottile delle dita; si vede solo dove esce dal palmo (in alto a
     # sinistra), la punta resta nascosta dietro la tile.
-    content.alpha_composite(rotated_rrect(38, 196, 19, PEACH, angle=13, center=(432, 344)))
+    content.alpha_composite(rotated_rrect(38, 196, 19, PEACH, angle=13, center=(458, 344)))
 
     # Tile tenuta (copre la parte bassa del pollice -> niente punta visibile)
     tile(content, held, hrad, CORAL)
