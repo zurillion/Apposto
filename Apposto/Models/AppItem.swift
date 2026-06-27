@@ -22,6 +22,10 @@ final class AppItem: ObservableObject, Identifiable {
     /// nome localizzato. `nil` se coincide col nome mostrato.
     let originalName: String?
 
+    /// `true` se l'eseguibile supporta solo architetture Intel (x86_64/i386) e
+    /// non arm64: gira solo tramite Rosetta sui Mac Apple Silicon.
+    let isIntelOnly: Bool
+
     /// Data in cui l'app è stata aggiunta alla cartella (per l'ordinamento).
     let dateAdded: Date?
 
@@ -34,13 +38,14 @@ final class AppItem: ObservableObject, Identifiable {
 
     init(id: String, name: String, url: URL, bundleIdentifier: String?,
          aliases: [String] = [], originalName: String? = nil,
-         dateAdded: Date? = nil, icon: NSImage? = nil) {
+         isIntelOnly: Bool = false, dateAdded: Date? = nil, icon: NSImage? = nil) {
         self.id = id
         self.name = name
         self.url = url
         self.bundleIdentifier = bundleIdentifier
         self.aliases = aliases
         self.originalName = originalName
+        self.isIntelOnly = isIntelOnly
         self.dateAdded = dateAdded
         self.icon = icon
     }

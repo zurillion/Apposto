@@ -38,6 +38,7 @@ private struct GeneralSettingsTab: View {
             Section("Generale") {
                 Toggle("Mostra icona nel Dock", isOn: $settings.showInDock)
                 Toggle("Pallino sulle app con tag", isOn: $settings.showTagIndicator)
+                Toggle("Badge \"Intel\" sulle app solo-Intel", isOn: $settings.showIntelBadge)
             }
 
             Section("Scorciatoia") {

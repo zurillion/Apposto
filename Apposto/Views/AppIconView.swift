@@ -26,6 +26,7 @@ struct AppIconView: View {
             iconView
                 .frame(width: iconSize, height: iconSize)
                 .overlay(alignment: .topTrailing) { tagIndicator }
+                .overlay(alignment: .bottom) { intelBadge }
 
             if showLabel {
                 VStack(spacing: 1) {
@@ -89,6 +90,20 @@ struct AppIconView: View {
                 .frame(width: dot, height: dot)
                 .overlay(Circle().strokeBorder(Color(nsColor: .windowBackgroundColor), lineWidth: 1.5))
                 .offset(x: -2, y: 2)
+        }
+    }
+
+    @ViewBuilder
+    private var intelBadge: some View {
+        if settings.showIntelBadge && app.isIntelOnly {
+            Text("Intel")
+                .font(.system(size: min(max(iconSize * 0.16, 8), 11), weight: .semibold))
+                .foregroundStyle(.white)
+                .padding(.horizontal, 5)
+                .padding(.vertical, 1.5)
+                .background(Capsule().fill(Color.black.opacity(0.6)))
+                .overlay(Capsule().strokeBorder(Color.white.opacity(0.25), lineWidth: 0.5))
+                .offset(y: -4)
         }
     }
 
