@@ -105,6 +105,9 @@ Apposto/
   background) e li salva in cache su disco, così all'avvio la lista compare
   subito mentre una nuova scansione la aggiorna. Le **icone** sono caricate
   pigramente e in modo asincrono (`IconLoader`), per non bloccare l'interfaccia.
+  La griglia renderizza **solo la pagina corrente** (una `LazyVGrid` fuori da
+  uno `ScrollView` materializza tutte le celle): così cambiare dimensione delle
+  icone ricalcola poche icone, non centinaia.
 - **Preferenze**: il launcher resta visibile sotto la finestra Preferenze
   (livello abbassato a `.normal`) e si aggiorna in tempo reale; l'auto-hide
   scatta solo quando si passa a un'altra app (`applicationDidResignActive`).
