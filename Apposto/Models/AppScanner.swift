@@ -40,6 +40,11 @@ enum AppScanner {
         var seen = Set<String>()
         var items: [AppItem] = []
 
+        // --- Diagnostica nomi localizzati (temporanea) ---
+        let q: (String?) -> String = { $0.map { "'\($0)'" } ?? "nil" }
+        var diag: [String] = []
+        var finderDiff = 0, plistDiff = 0, fsDiff = 0
+
         for root in searchRoots {
             guard fm.fileExists(atPath: root.path) else { continue }
             guard let enumerator = fm.enumerator(
@@ -93,6 +98,17 @@ enum AppScanner {
                     aliases.append(cand)
                 }
 
+                // --- Diagnostica: quali fonti danno un nome diverso dall'inglese? ---
+                let finderLoc = finderName.map { $0.localizedCaseInsensitiveCompare(fileName) != .orderedSame } ?? false
+                let plistLoc = localizedPlist.map { $0.localizedCaseInsensitiveCompare(fileName) != .orderedSame } ?? false
+                let fsLoc = fsName.map { $0.localizedCaseInsensitiveCompare(fileName) != .orderedSame } ?? false
+                if finderLoc { finderDiff += 1 }
+                if plistLoc { plistDiff += 1 }
+                if fsLoc { fsDiff += 1 }
+                if finderLoc || plistLoc || fsLoc {
+                    diag.append("[Apposto] file=\(q(fileName)) finder=\(q(finderName)) fs=\(q(fsName)) plist=\(q(localizedPlist)) base=\(q(baseName))")
+                }
+
                 // "Data di aggiunta" come in Finder; fallback alla creazione.
                 let dateAdded = values?.addedToDirectoryDate ?? values?.creationDate
 
@@ -104,6 +120,11 @@ enum AppScanner {
                                      dateAdded: dateAdded))
             }
         }
+
+        // --- Riepilogo diagnostica nomi localizzati (temporanea) ---
+        print("[Apposto] SCAN nomi: totale=\(items.count)  displayName!=file=\(finderDiff)  localizedInfoDictionary!=file=\(plistDiff)  localizedNameKey!=file=\(fsDiff)")
+        for line in diag.prefix(80) { print(line) }
+        if diag.count > 80 { print("[Apposto] ...e altre \(diag.count - 80) app con nome localizzato") }
 
         return items.sorted {
             $0.name.localizedStandardCompare($1.name) == .orderedAscending
