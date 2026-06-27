@@ -82,12 +82,15 @@ struct AppIconView: View {
 
     private func handleLeftClick() {
         let mods = NSEvent.modifierFlags.intersection(.deviceIndependentFlagsMask)
-        if mods.contains(.shift) || mods.contains(.command) {
-            model.toggleSelection(app.id)
+        if mods.contains(.shift) {
+            model.shiftSelect(app.id)
+        } else if mods.contains(.command) {
+            model.commandSelect(app.id)
         } else if mods.contains(.control) {
             model.openTagEditor(anchor: app)
         } else {
-            model.selectedAppIDs.removeAll()
+            // Clic semplice: annulla la selezione e avvia l'app.
+            model.clearSelection()
             model.launch(app)
         }
     }

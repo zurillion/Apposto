@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 /// Griglia di icone suddivisa in pagine.
 ///
@@ -75,6 +76,15 @@ struct PagedGridView: View {
             }
             .clipped()
             .contentShape(Rectangle())
+            .onTapGesture {
+                // Clic nel vuoto, senza modificatori, annulla la selezione.
+                // La guardia evita di annullarla se per qualche motivo il tap
+                // arrivasse qui durante uno Shift/⌘ + clic su una cella.
+                let mods = NSEvent.modifierFlags.intersection(.deviceIndependentFlagsMask)
+                if !mods.contains(.shift) && !mods.contains(.command) {
+                    model.clearSelection()
+                }
+            }
             .gesture(
                 DragGesture(minimumDistance: 20)
                     .onEnded { value in

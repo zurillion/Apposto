@@ -26,6 +26,13 @@ final class AppModel: ObservableObject {
     /// App selezionate (con Shift/⌘ + clic) per l'assegnazione in blocco dei tag.
     @Published var selectedAppIDs: Set<String> = []
 
+    /// App attualmente visibili, nell'ordine mostrato (serve alla selezione a
+    /// intervallo con Shift). Aggiornato dalla vista radice.
+    var visibleAppIDs: [String] = []
+
+    /// Ancora della selezione: la prima app selezionata, da cui parte il range.
+    private var selectionAnchorID: String?
+
     /// `id` della cella su cui è ancorato il popover dei tag (nil = chiuso).
     @Published var tagEditorAnchorID: String?
 
@@ -34,12 +41,36 @@ final class AppModel: ObservableObject {
 
     var isTagEditorOpen: Bool { tagEditorAnchorID != nil }
 
-    func toggleSelection(_ id: String) {
+    /// ⌘ + clic: aggiunge o toglie la singola app dalla selezione.
+    func commandSelect(_ id: String) {
+        if selectedAppIDs.isEmpty { selectionAnchorID = id }
         if selectedAppIDs.contains(id) {
             selectedAppIDs.remove(id)
         } else {
             selectedAppIDs.insert(id)
         }
+        if selectedAppIDs.isEmpty { selectionAnchorID = nil }
+    }
+
+    /// Shift + clic: seleziona tutte le app dall'ancora fino a quella cliccata
+    /// (nell'ordine visibile), aggiungendole alla selezione esistente.
+    func shiftSelect(_ id: String) {
+        guard let anchor = selectionAnchorID,
+              let from = visibleAppIDs.firstIndex(of: anchor),
+              let to = visibleAppIDs.firstIndex(of: id) else {
+            // Nessuna ancora: comportati come una singola selezione.
+            if selectedAppIDs.isEmpty { selectionAnchorID = id }
+            selectedAppIDs.insert(id)
+            return
+        }
+        for visibleID in visibleAppIDs[min(from, to)...max(from, to)] {
+            selectedAppIDs.insert(visibleID)
+        }
+    }
+
+    func clearSelection() {
+        selectedAppIDs.removeAll()
+        selectionAnchorID = nil
     }
 
     /// Apre l'editor dei tag: se l'app fa parte di una selezione, agisce su
@@ -113,7 +144,7 @@ final class AppModel: ObservableObject {
     func prepareForShow() {
         currentPage = 0
         resetToken &+= 1
-        selectedAppIDs = []
+        clearSelection()
         closeTagEditor()
     }
 }

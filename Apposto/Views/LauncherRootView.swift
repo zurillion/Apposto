@@ -22,7 +22,8 @@ struct LauncherRootView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
+        let visible = filtered
+        return VStack(spacing: 0) {
             SearchBar(text: $query, focused: $searchFocused, onSubmit: launchFirst)
                 .padding(.horizontal, 24)
                 .padding(.top, 20)
@@ -32,17 +33,23 @@ struct LauncherRootView: View {
                 Spacer()
                 ProgressView("Caricamento applicazioni…")
                 Spacer()
-            } else if filtered.isEmpty {
+            } else if visible.isEmpty {
                 Spacer()
                 Text("Nessuna applicazione trovata")
                     .foregroundStyle(.secondary)
                 Spacer()
             } else {
-                PagedGridView(apps: filtered)
+                PagedGridView(apps: visible)
             }
         }
         .background(VisualEffectBackground().ignoresSafeArea())
-        .onAppear { focusSearch() }
+        .onAppear {
+            model.visibleAppIDs = visible.map(\.id)
+            focusSearch()
+        }
+        .onChange(of: visible.map(\.id)) { ids in
+            model.visibleAppIDs = ids
+        }
         .onChange(of: query) { _ in model.currentPage = 0 }
         .onChange(of: model.resetToken) { _ in
             query = ""

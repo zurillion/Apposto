@@ -32,8 +32,11 @@ densità e dimensioni delle icone, sfoglia le pagine con uno swipe.
   case-insensitive e possono contenere spazi.
 - **Clic destro** (o Ctrl+clic) su un'app → finestra per vedere/aggiungere
   (esistente o nuovo, con suggerimenti) / rimuovere i tag.
-- **Selezione multipla** con **Shift/⌘ + clic** (celle evidenziate): il clic
-  destro su una di esse mostra i tag **comuni** e li aggiunge/rimuove a tutte.
+- **Selezione multipla** (celle evidenziate): **⌘ + clic** aggiunge/toglie la
+  singola app, **Shift + clic** seleziona l'intervallo dalla prima selezionata
+  fino alla cella cliccata. Un clic semplice (su un'icona o nel vuoto) annulla
+  la selezione. Il clic destro su una app selezionata mostra i tag **comuni** e
+  li aggiunge/rimuove a tutte.
 - **Ricerca per tag** con `#tag`, combinabile col nome dell'app e con più tag in
   qualunque posizione: `#tag1 nome app #tag2`.
 
