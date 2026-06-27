@@ -1,23 +1,27 @@
 import SwiftUI
 
-/// Vista radice del pannello: barra di ordinamento, ricerca e griglia paginata.
+/// Vista radice del pannello: barra di ordinamento, ricerca (con chip dei tag)
+/// e griglia paginata.
 struct LauncherRootView: View {
     @EnvironmentObject var model: AppModel
     @EnvironmentObject var settings: LauncherSettings
     @EnvironmentObject var tagStore: TagStore
 
-    @State private var query = ""
-    @FocusState private var searchFocused: Bool
+    /// Tag confermati (canonici) mostrati come chip nella barra di ricerca.
+    @State private var committedTags: [String] = []
+    /// Testo libero della ricerca (nome app e/o tag in corso di digitazione).
+    @State private var searchText = ""
 
-    /// App filtrate dal testo di ricerca: testo libero sul nome e/o filtri per
-    /// tag scritti come `#tag` (vedi `SearchQuery`).
+    /// App filtrate: devono avere tutti i tag-chip e soddisfare il resto della
+    /// query (nome e/o `#tag` ancora in digitazione, vedi `SearchQuery`).
     private var filtered: [AppItem] {
-        let raw = query.trimmingCharacters(in: .whitespaces)
-        guard !raw.isEmpty else { return model.apps }
-        let parsed = SearchQuery.parse(query, knownCanonicalTags: Array(tagStore.displayByCanonical.keys))
-        guard !parsed.isEmpty else { return model.apps }
-        return model.apps.filter {
-            parsed.matches(appName: $0.name, appTags: tagStore.canonicalTags(for: $0.id))
+        let parsed = SearchQuery.parse(searchText,
+                                       knownCanonicalTags: Array(tagStore.displayByCanonical.keys))
+        if committedTags.isEmpty && parsed.isEmpty { return model.apps }
+        return model.apps.filter { app in
+            let appTags = tagStore.canonicalTags(for: app.id)
+            for tag in committedTags where !appTags.contains(tag) { return false }
+            return parsed.matches(appName: app.name, appTags: appTags)
         }
     }
 
@@ -33,7 +37,13 @@ struct LauncherRootView: View {
                 .padding(.horizontal, 24)
                 .padding(.top, 14)
 
-            SearchBar(text: $query, focused: $searchFocused, onSubmit: launchFirst)
+            TagSearchBar(committedTags: $committedTags,
+                         text: $searchText,
+                         displayName: { tagStore.displayByCanonical[$0] ?? $0 },
+                         color: settings.theme.color,
+                         focusTrigger: model.resetToken,
+                         onTab: autocompleteSearchTag,
+                         onSubmit: launchFirst)
                 .padding(.horizontal, 24)
                 .padding(.top, 10)
                 .padding(.bottom, 8)
@@ -56,18 +66,55 @@ struct LauncherRootView: View {
         .onAppear {
             model.visibleAppIDs = visible.map(\.id)
             indexSizesIfNeeded()
-            focusSearch()
         }
         .onChange(of: visible.map(\.id)) { ids in
             model.visibleAppIDs = ids
         }
         .onChange(of: settings.sortField) { _ in indexSizesIfNeeded() }
-        .onChange(of: query) { _ in model.currentPage = 0 }
+        .onChange(of: committedTags) { _ in model.currentPage = 0 }
+        .onChange(of: searchText) { _ in model.currentPage = 0 }
         .onChange(of: model.resetToken) { _ in
-            query = ""
+            committedTags = []
+            searchText = ""
             model.currentPage = 0
-            focusSearch()
         }
+    }
+
+    // MARK: - Completamento tag nella ricerca
+
+    /// Tab: completa il `#tag` in corso (dall'ultimo `#`). Se diventa un tag
+    /// esistente (o il match è unico) lo conferma come chip; altrimenti estende
+    /// al prefisso comune.
+    private func autocompleteSearchTag() {
+        guard let hashRange = searchText.range(of: "#", options: .backwards) else { return }
+        let afterHash = String(searchText[hashRange.upperBound...])
+        let canon = TagStore.canonical(afterHash)
+        guard !canon.isEmpty else { return }
+
+        let known = tagStore.displayByCanonical
+        let candidates = known.keys.filter { $0.hasPrefix(canon) }
+
+        if known[canon] != nil || candidates.count == 1 {
+            let chosen = candidates.count == 1 ? candidates[0] : canon
+            if !committedTags.contains(chosen) { committedTags.append(chosen) }
+            searchText.removeSubrange(hashRange.lowerBound...)
+        } else if candidates.count > 1 {
+            let common = longestCommonPrefix(candidates)
+            if common.count > canon.count {
+                searchText.replaceSubrange(hashRange.upperBound..., with: common)
+            }
+        }
+    }
+
+    private func longestCommonPrefix(_ strings: [String]) -> String {
+        guard var prefix = strings.first else { return "" }
+        for s in strings.dropFirst() {
+            while !s.hasPrefix(prefix) {
+                prefix = String(prefix.dropLast())
+                if prefix.isEmpty { return "" }
+            }
+        }
+        return prefix
     }
 
     // MARK: - Barra di ordinamento
@@ -126,18 +173,13 @@ struct LauncherRootView: View {
         if a == b {
             return aName.localizedStandardCompare(bName) == .orderedAscending
         }
-        guard let a else { return false } // a mancante → dopo
-        guard let b else { return true }  // b mancante → a prima
+        guard let a else { return false }
+        guard let b else { return true }
         return ascending ? a < b : a > b
     }
 
     private func indexSizesIfNeeded() {
         if settings.sortField == .size { model.ensureSizesIndexed() }
-    }
-
-    private func focusSearch() {
-        // Leggero rinvio: il focus attecchisce dopo che il pannello è key.
-        DispatchQueue.main.async { searchFocused = true }
     }
 
     private func launchFirst() {

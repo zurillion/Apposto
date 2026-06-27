@@ -42,12 +42,15 @@ densità e dimensioni delle icone, sfoglia le pagine con uno swipe.
   la selezione. Il clic destro su una app selezionata mostra i tag **comuni** e
   li aggiunge/rimuove a tutte.
 - **Ricerca per tag** con `#tag`, combinabile col nome dell'app e con più tag in
-  qualunque posizione: `#tag1 nome app #tag2`.
+  qualunque posizione: `#tag1 nome app #tag2`. Digitando un `#tag`, **Tab**
+  lo completa (intero se unico, prefisso comune se ambiguo) e i tag completati
+  diventano **chip** (ovali colorati) nel campo di ricerca. Backspace a campo
+  vuoto rimuove l'ultimo chip.
 - **Indicatore tag**: un pallino sull'icona segnala le app che hanno almeno un
   tag (attivo di default; disattivabile dalle Preferenze).
-
-> Fase 2 (in arrivo): completamento dei tag con **Tab** e tag completati
-> mostrati come **ovali colorati** (chip) nel campo di ricerca.
+- **Sinonimi**: gruppi configurabili nelle Preferenze; aggiungendo un tag di un
+  gruppo gli altri vengono assegnati alle stesse app (e rimossi insieme).
+- **Temi**: 8 temi colorati selezionabili nelle Preferenze.
 
 ## Requisiti
 
@@ -79,6 +82,8 @@ Apri le Preferenze dalla voce di menu della barra dei menu, o con **⌘,**:
 
 - **Mostra icona nel Dock** (attiva di default).
 - **Pallino sulle app con tag** (attivo di default).
+- **Tema**: 8 colori selezionabili.
+- **Sinonimi**: gruppi di tag aggiunti/rimossi insieme.
 - **Scorciatoia**: clicca il pulsante e premi la nuova combinazione (serve
   almeno un modificatore ⌃ ⌥ ⇧ ⌘; Esc annulla; "Ripristina" torna al default).
 - **Dimensione icona** e **Spaziatura** (slider).
@@ -108,7 +113,8 @@ Apposto/
 │  └─ LauncherWindowController.swift  # NSPanel floating + posizionamento
 └─ Views/
    ├─ LauncherRootView.swift   # ricerca + griglia
-   ├─ SearchBar.swift
+   ├─ TagSearchBar.swift       # ricerca con chip dei tag (ovali colorati)
+   ├─ SearchTextField.swift    # campo ricerca (Tab/Invio/Backspace)
    ├─ PagedGridView.swift      # paginazione + layout adattivo
    ├─ AppIconView.swift        # cella: clic/selezione/clic destro + popover tag
    ├─ PageIndicator.swift      # pallini
@@ -145,9 +151,6 @@ Apposto/
 
 ## Roadmap (idee per le prossime iterazioni)
 
-- **Tag — Fase 2**: campo di ricerca con completamento dei tag tramite **Tab**
-  (tag intero se non ambiguo, prefisso comune se ambiguo) e tag completati
-  mostrati come **ovali colorati** (chip) inline.
 - Opzione per normalizzare la direzione dello swipe del trackpad in base alla
   preferenza di sistema "scorrimento naturale" (oggi si segue sempre quella
   di sistema; il trascinamento col mouse usa invece la direzione fisica).
