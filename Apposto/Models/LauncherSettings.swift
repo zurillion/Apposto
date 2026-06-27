@@ -7,6 +7,14 @@ enum SortField: String, CaseIterable {
     case name
     case size
     case dateAdded
+
+    var title: String {
+        switch self {
+        case .name: return "Nome"
+        case .size: return "Dimensione"
+        case .dateAdded: return "Data"
+        }
+    }
 }
 
 /// Impostazioni dell'utente, persistite in `UserDefaults`.

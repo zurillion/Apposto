@@ -61,7 +61,7 @@ struct LauncherRootView: View {
                 PagedGridView(apps: visible)
             }
         }
-        .background(VisualEffectBackground().ignoresSafeArea())
+        .background(themedBackground.ignoresSafeArea())
         .tint(settings.theme.color)
         .onAppear {
             model.visibleAppIDs = visible.map(\.id)
@@ -117,29 +117,72 @@ struct LauncherRootView: View {
         return prefix
     }
 
+    // MARK: - Sfondo a tema
+
+    /// Vibrancy del pannello con sopra un velo del colore del tema, così l'intera
+    /// finestra assume la tinta scelta.
+    private var themedBackground: some View {
+        ZStack {
+            VisualEffectBackground()
+            LinearGradient(
+                colors: [settings.theme.color.opacity(0.30),
+                         settings.theme.color.opacity(0.12)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        }
+    }
+
     // MARK: - Barra di ordinamento
 
+    /// Controllo segmentato: il campo attivo mostra la freccia di direzione e,
+    /// ricliccandolo, inverte l'ordine.
     private var sortBar: some View {
-        HStack(spacing: 8) {
-            Picker("Ordina", selection: $settings.sortField) {
-                Text("Nome").tag(SortField.name)
-                Text("Dimensione").tag(SortField.size)
-                Text("Data").tag(SortField.dateAdded)
+        HStack {
+            HStack(spacing: 4) {
+                ForEach(SortField.allCases, id: \.self) { field in
+                    sortSegment(field)
+                }
             }
-            .pickerStyle(.segmented)
-            .labelsHidden()
+            .padding(3)
+            .background(RoundedRectangle(cornerRadius: 9).fill(Color.primary.opacity(0.08)))
             .frame(maxWidth: 360)
-
-            Button {
-                settings.sortAscending.toggle()
-            } label: {
-                Image(systemName: settings.sortAscending ? "arrow.up" : "arrow.down")
-            }
-            .buttonStyle(.borderless)
-            .help(settings.sortAscending ? "Ordine crescente" : "Ordine decrescente")
 
             Spacer(minLength: 0)
         }
+    }
+
+    private func sortSegment(_ field: SortField) -> some View {
+        let isActive = settings.sortField == field
+        return Button {
+            if isActive {
+                settings.sortAscending.toggle()
+            } else {
+                settings.sortField = field
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Text(field.title)
+                    .font(.system(size: 12, weight: .medium))
+                if isActive {
+                    Image(systemName: settings.sortAscending ? "chevron.up" : "chevron.down")
+                        .font(.system(size: 9, weight: .bold))
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 4)
+            .frame(maxWidth: .infinity)
+            .background(
+                RoundedRectangle(cornerRadius: 7)
+                    .fill(isActive ? settings.theme.color : Color.clear)
+            )
+            .foregroundStyle(isActive ? Color.white : Color.primary)
+            .contentShape(RoundedRectangle(cornerRadius: 7))
+        }
+        .buttonStyle(.plain)
+        .help(isActive
+              ? (settings.sortAscending ? "Crescente — clicca per invertire" : "Decrescente — clicca per invertire")
+              : "Ordina per \(field.title.lowercased())")
     }
 
     // MARK: - Ordinamento
