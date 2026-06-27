@@ -43,7 +43,7 @@ enum AppScanner {
         // --- Diagnostica nomi localizzati (temporanea) ---
         let q: (String?) -> String = { $0.map { "'\($0)'" } ?? "nil" }
         var diag: [String] = []
-        var finderDiff = 0, plistDiff = 0, fsDiff = 0
+        var finderDiff = 0, plistDiff = 0, fsDiff = 0, loctableDiff = 0
 
         for root in searchRoots {
             guard fm.fileExists(atPath: root.path) else { continue }
@@ -79,18 +79,21 @@ enum AppScanner {
                 let fsName = clean(values?.localizedName)
                 let localizedPlist = clean(bundle?.localizedInfoDictionary?["CFBundleDisplayName"] as? String)
                                  ?? clean(bundle?.localizedInfoDictionary?["CFBundleName"] as? String)
+                // Nome dal file InfoPlist.loctable (formato consolidato usato dalle
+                // app di sistema, NON letto da localizedInfoDictionary).
+                let loctable = clean(loctableName(url))
                 // Nome base NON localizzato dell'Info.plist (l'inglese "vero").
                 let baseName = clean(bundle?.infoDictionary?["CFBundleDisplayName"] as? String)
                            ?? clean(bundle?.infoDictionary?["CFBundleName"] as? String)
 
-                let name = finderName ?? localizedPlist ?? fsName ?? fileName
+                let name = loctable ?? localizedPlist ?? finderName ?? fsName ?? fileName
 
                 // Alias per la ricerca: gli altri nomi (in particolare l'inglese,
                 // cioè il nome del file e i valori base dell'Info.plist), unici e
                 // diversi dal mostrato. Così "Utility Disco" si trova anche con
                 // "Disk Utility" e viceversa.
                 var aliases: [String] = []
-                let candidates: [String?] = [fileName, baseName, fsName, localizedPlist, finderName]
+                let candidates: [String?] = [fileName, baseName, fsName, localizedPlist, finderName, loctable]
                 for case let cand? in candidates {
                     guard cand.localizedCaseInsensitiveCompare(name) != .orderedSame,
                           !aliases.contains(where: { $0.localizedCaseInsensitiveCompare(cand) == .orderedSame })
@@ -102,11 +105,19 @@ enum AppScanner {
                 let finderLoc = finderName.map { $0.localizedCaseInsensitiveCompare(fileName) != .orderedSame } ?? false
                 let plistLoc = localizedPlist.map { $0.localizedCaseInsensitiveCompare(fileName) != .orderedSame } ?? false
                 let fsLoc = fsName.map { $0.localizedCaseInsensitiveCompare(fileName) != .orderedSame } ?? false
+                let loctableLoc = loctable.map { $0.localizedCaseInsensitiveCompare(fileName) != .orderedSame } ?? false
                 if finderLoc { finderDiff += 1 }
                 if plistLoc { plistDiff += 1 }
                 if fsLoc { fsDiff += 1 }
-                if finderLoc || plistLoc || fsLoc {
-                    diag.append("[Apposto] file=\(q(fileName)) finder=\(q(finderName)) fs=\(q(fsName)) plist=\(q(localizedPlist)) base=\(q(baseName))")
+                if loctableLoc { loctableDiff += 1 }
+                if finderLoc || plistLoc || fsLoc || loctableLoc {
+                    diag.append("[Apposto] file=\(q(fileName)) loctable=\(q(loctable)) finder=\(q(finderName)) plist=\(q(localizedPlist)) base=\(q(baseName))")
+                }
+                // Sonda mirata su alcune app di sistema note per essere localizzate:
+                // mostra se il loctable esiste e quali lingue contiene.
+                if ["Disk Utility", "Dictionary", "Calculator", "Reminders",
+                    "Maps", "Notes", "System Settings", "Console"].contains(fileName) {
+                    print("[Apposto][probe] \(q(fileName)) loctable=\(q(loctable)) \(loctableInfo(url)) lproj=\(lprojList(url))")
                 }
 
                 // "Data di aggiunta" come in Finder; fallback alla creazione.
@@ -122,7 +133,7 @@ enum AppScanner {
         }
 
         // --- Riepilogo diagnostica nomi localizzati (temporanea) ---
-        print("[Apposto] SCAN nomi: totale=\(items.count)  displayName!=file=\(finderDiff)  localizedInfoDictionary!=file=\(plistDiff)  localizedNameKey!=file=\(fsDiff)")
+        print("[Apposto] SCAN nomi: totale=\(items.count)  loctable!=file=\(loctableDiff)  displayName!=file=\(finderDiff)  localizedInfoDictionary!=file=\(plistDiff)  localizedNameKey!=file=\(fsDiff)")
         for line in diag.prefix(80) { print(line) }
         if diag.count > 80 { print("[Apposto] ...e altre \(diag.count - 80) app con nome localizzato") }
 
@@ -137,5 +148,68 @@ enum AppScanner {
         guard var t = s?.trimmingCharacters(in: .whitespacesAndNewlines), !t.isEmpty else { return nil }
         if t.hasSuffix(".app") { t = String(t.dropLast(4)) }
         return t.isEmpty ? nil : t
+    }
+
+    /// Carica un plist (binario, XML o vecchio formato `.strings`) come dizionario.
+    private static func loadPlistDict(_ url: URL) -> [String: Any]? {
+        guard let data = try? Data(contentsOf: url),
+              let plist = try? PropertyListSerialization.propertyList(from: data, options: [], format: nil)
+        else { return nil }
+        return plist as? [String: Any]
+    }
+
+    /// Estrae il nome (display o bundle) da una tabella di localizzazione.
+    private static func nameIn(_ table: [String: Any]) -> String? {
+        guard let n = (table["CFBundleDisplayName"] as? String) ?? (table["CFBundleName"] as? String),
+              !n.trimmingCharacters(in: .whitespaces).isEmpty else { return nil }
+        return n
+    }
+
+    /// Nome localizzato dell'app letto dai file di localizzazione del bundle che
+    /// le API standard non leggono: il `InfoPlist.loctable` consolidato (formato
+    /// usato dalle app di sistema) e, in fallback, i `*.lproj/InfoPlist.loctable`
+    /// o `InfoPlist.strings` per lingua. Sceglie la lingua migliore secondo le
+    /// preferenze dell'utente.
+    private static func loctableName(_ bundleURL: URL) -> String? {
+        let res = bundleURL.appendingPathComponent("Contents/Resources")
+        let prefs = Locale.preferredLanguages
+
+        // 1) loctable consolidato: { lingua: { chiave: valore } }
+        if let byLang = loadPlistDict(res.appendingPathComponent("InfoPlist.loctable")) {
+            let available = byLang.keys.filter { $0 != "LocProvenance" }
+            for lang in Bundle.preferredLocalizations(from: Array(available), forPreferences: prefs) {
+                if let table = byLang[lang] as? [String: Any], let n = nameIn(table) { return n }
+            }
+        }
+
+        // 2) per-lingua: <lang>.lproj/InfoPlist.(loctable|strings)
+        let items = (try? FileManager.default.contentsOfDirectory(atPath: res.path)) ?? []
+        let langDirs = items.filter { $0.hasSuffix(".lproj") }.map { String($0.dropLast(6)) }
+        for lang in Bundle.preferredLocalizations(from: langDirs, forPreferences: prefs) {
+            let dir = res.appendingPathComponent("\(lang).lproj")
+            for file in ["InfoPlist.loctable", "InfoPlist.strings"] {
+                guard let dict = loadPlistDict(dir.appendingPathComponent(file)) else { continue }
+                if let n = nameIn(dict) { return n }                       // formato flat
+                if let inner = dict[lang] as? [String: Any], let n = nameIn(inner) { return n } // lingua-chiave
+            }
+        }
+        return nil
+    }
+
+    // --- Helper diagnostici (temporanei) ---
+
+    private static func loctableInfo(_ bundleURL: URL) -> String {
+        let res = bundleURL.appendingPathComponent("Contents/Resources")
+        if let byLang = loadPlistDict(res.appendingPathComponent("InfoPlist.loctable")) {
+            return "loctable_langs=[\(byLang.keys.sorted().joined(separator: ","))]"
+        }
+        return "loctable=ASSENTE"
+    }
+
+    private static func lprojList(_ bundleURL: URL) -> String {
+        let res = bundleURL.appendingPathComponent("Contents/Resources").path
+        let items = (try? FileManager.default.contentsOfDirectory(atPath: res)) ?? []
+        let lprojs = items.filter { $0.hasSuffix(".lproj") }.sorted()
+        return "[\(lprojs.prefix(25).joined(separator: ","))]"
     }
 }
