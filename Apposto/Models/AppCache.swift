@@ -9,6 +9,7 @@ enum AppCache {
         let name: String
         let path: String
         let bundleIdentifier: String?
+        var dateAdded: Double?
     }
 
     private static var fileURL: URL? {
@@ -27,14 +28,17 @@ enum AppCache {
             AppItem(id: $0.id,
                     name: $0.name,
                     url: URL(fileURLWithPath: $0.path),
-                    bundleIdentifier: $0.bundleIdentifier)
+                    bundleIdentifier: $0.bundleIdentifier,
+                    dateAdded: $0.dateAdded.map { Date(timeIntervalSince1970: $0) })
         }
     }
 
     static func save(_ apps: [AppItem]) {
         guard let url = fileURL else { return }
         let entries = apps.map {
-            Entry(id: $0.id, name: $0.name, path: $0.url.path, bundleIdentifier: $0.bundleIdentifier)
+            Entry(id: $0.id, name: $0.name, path: $0.url.path,
+                  bundleIdentifier: $0.bundleIdentifier,
+                  dateAdded: $0.dateAdded?.timeIntervalSince1970)
         }
         guard let data = try? JSONEncoder().encode(entries) else { return }
         try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(),

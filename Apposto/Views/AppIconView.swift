@@ -14,15 +14,18 @@ struct AppIconView: View {
 
     @EnvironmentObject var model: AppModel
     @EnvironmentObject var tagStore: TagStore
+    @EnvironmentObject var settings: LauncherSettings
 
     @State private var hovering = false
 
     private var isSelected: Bool { model.selectedAppIDs.contains(app.id) }
+    private var hasTags: Bool { !tagStore.canonicalTags(for: app.id).isEmpty }
 
     var body: some View {
         VStack(spacing: 6) {
             iconView
                 .frame(width: iconSize, height: iconSize)
+                .overlay(alignment: .topTrailing) { tagIndicator }
 
             if showLabel {
                 Text(app.name)
@@ -58,6 +61,18 @@ struct AppIconView: View {
         if isSelected { return Color.accentColor.opacity(0.22) }
         if hovering { return Color.primary.opacity(0.12) }
         return Color.clear
+    }
+
+    @ViewBuilder
+    private var tagIndicator: some View {
+        if settings.showTagIndicator && hasTags {
+            let dot = min(max(iconSize * 0.18, 8), 16)
+            Circle()
+                .fill(Color.accentColor)
+                .frame(width: dot, height: dot)
+                .overlay(Circle().strokeBorder(Color(nsColor: .windowBackgroundColor), lineWidth: 1.5))
+                .offset(x: -2, y: 2)
+        }
     }
 
     @ViewBuilder

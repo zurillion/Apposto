@@ -2,6 +2,13 @@ import Foundation
 import Combine
 import Carbon.HIToolbox
 
+/// Criterio di ordinamento delle app.
+enum SortField: String, CaseIterable {
+    case name
+    case size
+    case dateAdded
+}
+
 /// Impostazioni dell'utente, persistite in `UserDefaults`.
 ///
 /// I valori vengono salvati nei rispettivi `didSet`. L'inizializzatore assegna
@@ -16,6 +23,9 @@ final class LauncherSettings: ObservableObject {
         static let showInDock = "showInDock"
         static let hotKeyCode = "hotKeyCode"
         static let hotKeyModifiers = "hotKeyModifiers"
+        static let sortField = "sortField"
+        static let sortAscending = "sortAscending"
+        static let showTagIndicator = "showTagIndicator"
     }
 
     /// Valori di default della scorciatoia globale: ⌃⌥⌘ + Spazio.
@@ -47,6 +57,13 @@ final class LauncherSettings: ObservableObject {
     /// Maschera dei modificatori Carbon della scorciatoia globale.
     @Published var hotKeyModifiers: Int { didSet { defaults.set(hotKeyModifiers, forKey: Keys.hotKeyModifiers) } }
 
+    /// Criterio di ordinamento e direzione.
+    @Published var sortField: SortField { didSet { defaults.set(sortField.rawValue, forKey: Keys.sortField) } }
+    @Published var sortAscending: Bool { didSet { defaults.set(sortAscending, forKey: Keys.sortAscending) } }
+
+    /// Mostra un pallino sulle app che hanno almeno un tag.
+    @Published var showTagIndicator: Bool { didSet { defaults.set(showTagIndicator, forKey: Keys.showTagIndicator) } }
+
     init() {
         iconSize = (defaults.object(forKey: Keys.iconSize) as? Double) ?? 72
         spacing = (defaults.object(forKey: Keys.spacing) as? Double) ?? 24
@@ -55,6 +72,9 @@ final class LauncherSettings: ObservableObject {
         showInDock = (defaults.object(forKey: Keys.showInDock) as? Bool) ?? true
         hotKeyCode = (defaults.object(forKey: Keys.hotKeyCode) as? Int) ?? HotKeyDefault.code
         hotKeyModifiers = (defaults.object(forKey: Keys.hotKeyModifiers) as? Int) ?? HotKeyDefault.modifiers
+        sortField = SortField(rawValue: defaults.string(forKey: Keys.sortField) ?? "") ?? .name
+        sortAscending = (defaults.object(forKey: Keys.sortAscending) as? Bool) ?? true
+        showTagIndicator = (defaults.object(forKey: Keys.showTagIndicator) as? Bool) ?? true
     }
 
     /// Riporta la scorciatoia al valore di default.

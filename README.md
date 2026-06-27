@@ -19,6 +19,9 @@ densità e dimensioni delle icone, sfoglia le pagine con uno swipe.
   sottocartelle (es. *Utilities*). I bundle `.app` sono trattati come foglie.
 - **Griglia adattiva**: il numero di icone per pagina dipende da dimensione
   della finestra, dimensione dell'icona e spaziatura — tutto regolabile.
+- **Ordinamento** (barra in cima) per **nome**, **dimensione** o **data di
+  aggiunta**, in entrambe le direzioni. La dimensione dei bundle è calcolata in
+  background e messa in cache.
 - **Ricerca istantanea** dalla barra in alto (insensibile a maiuscole/accenti);
   premi Invio per avviare il primo risultato.
 - **Pagine con indicatore a pallini**; si cambia pagina con swipe del trackpad,
@@ -39,6 +42,8 @@ densità e dimensioni delle icone, sfoglia le pagine con uno swipe.
   li aggiunge/rimuove a tutte.
 - **Ricerca per tag** con `#tag`, combinabile col nome dell'app e con più tag in
   qualunque posizione: `#tag1 nome app #tag2`.
+- **Indicatore tag**: un pallino sull'icona segnala le app che hanno almeno un
+  tag (attivo di default; disattivabile dalle Preferenze).
 
 > Fase 2 (in arrivo): completamento dei tag con **Tab** e tag completati
 > mostrati come **ovali colorati** (chip) nel campo di ricerca.
@@ -72,6 +77,7 @@ densità e dimensioni delle icone, sfoglia le pagine con uno swipe.
 Apri le Preferenze dalla voce di menu della barra dei menu, o con **⌘,**:
 
 - **Mostra icona nel Dock** (attiva di default).
+- **Pallino sulle app con tag** (attivo di default).
 - **Scorciatoia**: clicca il pulsante e premi la nuova combinazione (serve
   almeno un modificatore ⌃ ⌥ ⇧ ⌘; Esc annulla; "Ripristina" torna al default).
 - **Dimensione icona** e **Spaziatura** (slider).
@@ -93,7 +99,8 @@ Apposto/
 │  ├─ AppModel.swift           # stato condiviso + azioni (reload/launch/selezione)
 │  ├─ LauncherSettings.swift   # impostazioni persistite in UserDefaults
 │  ├─ TagStore.swift           # database tag persistente (Application Support)
-│  └─ SearchQuery.swift        # parsing ricerca con #tag + nome app
+│  ├─ SearchQuery.swift        # parsing ricerca con #tag + nome app
+│  └─ BundleSize.swift         # dimensione bundle (ricorsiva) + cache
 ├─ HotKey/
 │  └─ HotKeyManager.swift      # RegisterEventHotKey (Carbon), nessun permesso
 ├─ Window/

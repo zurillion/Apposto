@@ -31,7 +31,10 @@ enum AppScanner {
     /// `AppItem` ordinati per nome, senza icone.
     static func scanMetadata() -> [AppItem] {
         let fm = FileManager.default
-        let keys: [URLResourceKey] = [.isApplicationKey, .localizedNameKey, .isDirectoryKey]
+        let keys: [URLResourceKey] = [
+            .isApplicationKey, .localizedNameKey, .isDirectoryKey,
+            .addedToDirectoryDateKey, .creationDateKey,
+        ]
         let keySet = Set(keys)
 
         var seen = Set<String>()
@@ -61,10 +64,14 @@ enum AppScanner {
                 let rawName = values?.localizedName ?? fm.displayName(atPath: url.path)
                 let name = rawName.hasSuffix(".app") ? String(rawName.dropLast(4)) : rawName
 
+                // "Data di aggiunta" come in Finder; fallback alla creazione.
+                let dateAdded = values?.addedToDirectoryDate ?? values?.creationDate
+
                 items.append(AppItem(id: dedupKey,
                                      name: name,
                                      url: url,
-                                     bundleIdentifier: bundleID))
+                                     bundleIdentifier: bundleID,
+                                     dateAdded: dateAdded))
             }
         }
 

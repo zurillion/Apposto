@@ -12,14 +12,18 @@ final class AppItem: ObservableObject, Identifiable {
     let url: URL
     let bundleIdentifier: String?
 
+    /// Data in cui l'app è stata aggiunta alla cartella (per l'ordinamento).
+    let dateAdded: Date?
+
     /// Icona dell'app. `nil` finché non viene caricata da `IconLoader`.
     @Published var icon: NSImage?
 
-    init(id: String, name: String, url: URL, bundleIdentifier: String?, icon: NSImage? = nil) {
+    init(id: String, name: String, url: URL, bundleIdentifier: String?, dateAdded: Date? = nil, icon: NSImage? = nil) {
         self.id = id
         self.name = name
         self.url = url
         self.bundleIdentifier = bundleIdentifier
+        self.dateAdded = dateAdded
         self.icon = icon
     }
 }

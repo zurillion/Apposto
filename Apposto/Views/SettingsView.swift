@@ -10,6 +10,7 @@ struct SettingsView: View {
         Form {
             Section("Generale") {
                 Toggle("Mostra icona nel Dock", isOn: $settings.showInDock)
+                Toggle("Pallino sulle app con tag", isOn: $settings.showTagIndicator)
             }
 
             Section("Scorciatoia") {

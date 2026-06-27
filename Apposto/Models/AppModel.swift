@@ -7,6 +7,11 @@ final class AppModel: ObservableObject {
     @Published private(set) var apps: [AppItem] = []
     @Published private(set) var isLoading = false
 
+    /// Dimensioni dei bundle in byte, calcolate in background su richiesta
+    /// (quando si ordina per dimensione). La lista si riordina man mano.
+    @Published private(set) var sizesByID: [String: Int64] = [:]
+    private var sizeIndexingInProgress = false
+
     /// Pagina visualizzata. Aggiornata da swipe, drag e pallini.
     @Published var currentPage = 0
 
@@ -127,6 +132,51 @@ final class AppModel: ObservableObject {
             item.icon = existingIcons[item.id]
         }
         apps = items
+
+        // Se l'utente sta già ordinando per dimensione, re-indicizza per
+        // includere eventuali nuove app.
+        if !sizesByID.isEmpty {
+            sizeIndexingInProgress = false
+            ensureSizesIndexed()
+        }
+    }
+
+    /// Calcola in background le dimensioni dei bundle (con cache su disco) e le
+    /// pubblica a lotti, così la griglia ordinata per dimensione si aggiorna
+    /// progressivamente senza bloccare l'interfaccia.
+    func ensureSizesIndexed() {
+        guard !sizeIndexingInProgress else { return }
+        sizeIndexingInProgress = true
+        let snapshot = apps
+        DispatchQueue.global(qos: .utility).async {
+            var cache = SizeCache.load()
+            var pending: [String: Int64] = [:]
+
+            func flush() {
+                let batch = pending
+                pending = [:]
+                DispatchQueue.main.async {
+                    self.sizesByID.merge(batch) { _, new in new }
+                }
+            }
+
+            for app in snapshot {
+                let modDate = (try? app.url.resourceValues(forKeys: [.contentModificationDateKey]))?
+                    .contentModificationDate?.timeIntervalSince1970 ?? 0
+                let bytes: Int64
+                if let cached = cache[app.id], cached.modDate == modDate {
+                    bytes = cached.bytes
+                } else {
+                    bytes = BundleSize.size(at: app.url)
+                    cache[app.id] = SizeCache.Entry(bytes: bytes, modDate: modDate)
+                }
+                pending[app.id] = bytes
+                if pending.count >= 30 { flush() }
+            }
+            if !pending.isEmpty { flush() }
+            SizeCache.save(cache)
+            DispatchQueue.main.async { self.sizeIndexingInProgress = false }
+        }
     }
 
     func launch(_ app: AppItem) {
