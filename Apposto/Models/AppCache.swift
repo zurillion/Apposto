@@ -10,6 +10,7 @@ enum AppCache {
         let path: String
         let bundleIdentifier: String?
         var aliases: [String]?
+        var originalName: String?
         var dateAdded: Double?
     }
 
@@ -31,6 +32,7 @@ enum AppCache {
                     url: URL(fileURLWithPath: $0.path),
                     bundleIdentifier: $0.bundleIdentifier,
                     aliases: $0.aliases ?? [],
+                    originalName: $0.originalName,
                     dateAdded: $0.dateAdded.map { Date(timeIntervalSince1970: $0) })
         }
     }
@@ -41,6 +43,7 @@ enum AppCache {
             Entry(id: $0.id, name: $0.name, path: $0.url.path,
                   bundleIdentifier: $0.bundleIdentifier,
                   aliases: $0.aliases.isEmpty ? nil : $0.aliases,
+                  originalName: $0.originalName,
                   dateAdded: $0.dateAdded?.timeIntervalSince1970)
         }
         guard let data = try? JSONEncoder().encode(entries) else { return }

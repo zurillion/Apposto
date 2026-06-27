@@ -99,6 +99,11 @@ private struct AppearanceSettingsTab: View {
                 LabeledSlider(title: "Spaziatura", value: $settings.spacing,
                               range: 0...80, step: 2, unit: "px")
                 Toggle("Mostra i nomi", isOn: $settings.showLabels)
+                Toggle("Mostra anche i nomi originali", isOn: $settings.showOriginalName)
+                    .disabled(!settings.showLabels)
+                Text("Sotto al nome localizzato mostra il nome originale (non tradotto), in grigio.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             Section("Griglia") {

@@ -18,6 +18,10 @@ final class AppItem: ObservableObject, Identifiable {
     /// Non vengono mai mostrati.
     let aliases: [String]
 
+    /// Nome "originale" (non localizzato) da mostrare opzionalmente sotto al
+    /// nome localizzato. `nil` se coincide col nome mostrato.
+    let originalName: String?
+
     /// Data in cui l'app è stata aggiunta alla cartella (per l'ordinamento).
     let dateAdded: Date?
 
@@ -29,12 +33,14 @@ final class AppItem: ObservableObject, Identifiable {
     @Published var icon: NSImage?
 
     init(id: String, name: String, url: URL, bundleIdentifier: String?,
-         aliases: [String] = [], dateAdded: Date? = nil, icon: NSImage? = nil) {
+         aliases: [String] = [], originalName: String? = nil,
+         dateAdded: Date? = nil, icon: NSImage? = nil) {
         self.id = id
         self.name = name
         self.url = url
         self.bundleIdentifier = bundleIdentifier
         self.aliases = aliases
+        self.originalName = originalName
         self.dateAdded = dateAdded
         self.icon = icon
     }

@@ -34,6 +34,7 @@ final class LauncherSettings: ObservableObject {
         static let sortField = "sortField"
         static let sortAscending = "sortAscending"
         static let showTagIndicator = "showTagIndicator"
+        static let showOriginalName = "showOriginalName"
         static let theme = "theme"
     }
 
@@ -73,6 +74,9 @@ final class LauncherSettings: ObservableObject {
     /// Mostra un pallino sulle app che hanno almeno un tag.
     @Published var showTagIndicator: Bool { didSet { defaults.set(showTagIndicator, forKey: Keys.showTagIndicator) } }
 
+    /// Mostra il nome originale (non localizzato) sotto al nome localizzato.
+    @Published var showOriginalName: Bool { didSet { defaults.set(showOriginalName, forKey: Keys.showOriginalName) } }
+
     /// Tema colorato selezionato.
     @Published var theme: AppTheme { didSet { defaults.set(theme.rawValue, forKey: Keys.theme) } }
 
@@ -87,6 +91,7 @@ final class LauncherSettings: ObservableObject {
         sortField = SortField(rawValue: defaults.string(forKey: Keys.sortField) ?? "") ?? .name
         sortAscending = (defaults.object(forKey: Keys.sortAscending) as? Bool) ?? true
         showTagIndicator = (defaults.object(forKey: Keys.showTagIndicator) as? Bool) ?? true
+        showOriginalName = (defaults.object(forKey: Keys.showOriginalName) as? Bool) ?? false
         theme = AppTheme(rawValue: defaults.string(forKey: Keys.theme) ?? "") ?? .blue
     }
 

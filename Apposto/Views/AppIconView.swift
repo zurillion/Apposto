@@ -28,13 +28,23 @@ struct AppIconView: View {
                 .overlay(alignment: .topTrailing) { tagIndicator }
 
             if showLabel {
-                Text(app.name)
-                    .font(.system(size: 12))
-                    .lineLimit(2)
-                    .multilineTextAlignment(.center)
-                    .truncationMode(.tail)
-                    .frame(maxWidth: iconSize + 24)
-                    .fixedSize(horizontal: false, vertical: true)
+                VStack(spacing: 1) {
+                    Text(app.name)
+                        .font(.system(size: 12))
+                        .lineLimit(2)
+                        .multilineTextAlignment(.center)
+                        .truncationMode(.tail)
+
+                    if settings.showOriginalName, let original = app.originalName {
+                        Text(original)
+                            .font(.system(size: 10))
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                    }
+                }
+                .frame(maxWidth: iconSize + 24)
+                .fixedSize(horizontal: false, vertical: true)
             }
         }
         .padding(8)

@@ -40,11 +40,6 @@ enum AppScanner {
         var seen = Set<String>()
         var items: [AppItem] = []
 
-        // --- Diagnostica nomi localizzati (temporanea) ---
-        let q: (String?) -> String = { $0.map { "'\($0)'" } ?? "nil" }
-        var diag: [String] = []
-        var finderDiff = 0, plistDiff = 0, fsDiff = 0, loctableDiff = 0
-
         for root in searchRoots {
             guard fm.fileExists(atPath: root.path) else { continue }
             guard let enumerator = fm.enumerator(
@@ -68,25 +63,27 @@ enum AppScanner {
                 seen.insert(dedupKey)
 
                 let fileName = url.deletingPathExtension().lastPathComponent
-                // Nome MOSTRATO = quello del Finder. `displayName(atPath:)` applica
-                // la stessa risoluzione del Finder (confronta CFBundleDisplayName
-                // col nome del file e usa la localizzazione del bundle) e torna il
-                // nome localizzato, es. "Utility Disco". NB: `.localizedNameKey`
-                // NON fa questa risoluzione e torna il nome del file (inglese), e
-                // `localizedInfoDictionary` non legge il formato InfoPlist.loctable
-                // usato dalle app di sistema: per questo serve `displayName`.
-                let finderName = clean(fm.displayName(atPath: url.path))
-                let fsName = clean(values?.localizedName)
+                // Nome MOSTRATO (localizzato come nel Finder). Le app di sistema
+                // tengono le localizzazioni in InfoPlist.loctable, che le API
+                // standard non leggono: lo parsiamo noi (`loctableName`). In
+                // fallback: localizedInfoDictionary, displayName, nome del file.
+                let loctable = clean(loctableName(url))
                 let localizedPlist = clean(bundle?.localizedInfoDictionary?["CFBundleDisplayName"] as? String)
                                  ?? clean(bundle?.localizedInfoDictionary?["CFBundleName"] as? String)
-                // Nome dal file InfoPlist.loctable (formato consolidato usato dalle
-                // app di sistema, NON letto da localizedInfoDictionary).
-                let loctable = clean(loctableName(url))
-                // Nome base NON localizzato dell'Info.plist (l'inglese "vero").
+                let finderName = clean(fm.displayName(atPath: url.path))
+                let fsName = clean(values?.localizedName)
+                // Nome base NON localizzato dell'Info.plist (l'inglese "originale").
                 let baseName = clean(bundle?.infoDictionary?["CFBundleDisplayName"] as? String)
                            ?? clean(bundle?.infoDictionary?["CFBundleName"] as? String)
 
                 let name = loctable ?? localizedPlist ?? finderName ?? fsName ?? fileName
+
+                // Nome "originale" (non localizzato) da mostrare opzionalmente:
+                // il nome del file o, in fallback, quello base dell'Info.plist.
+                // nil se coincide col nome mostrato (app non localizzata).
+                let originalName = [clean(fileName), baseName].compactMap { $0 }.first {
+                    $0.localizedCaseInsensitiveCompare(name) != .orderedSame
+                }
 
                 // Alias per la ricerca: gli altri nomi (in particolare l'inglese,
                 // cioè il nome del file e i valori base dell'Info.plist), unici e
@@ -101,25 +98,6 @@ enum AppScanner {
                     aliases.append(cand)
                 }
 
-                // --- Diagnostica: quali fonti danno un nome diverso dall'inglese? ---
-                let finderLoc = finderName.map { $0.localizedCaseInsensitiveCompare(fileName) != .orderedSame } ?? false
-                let plistLoc = localizedPlist.map { $0.localizedCaseInsensitiveCompare(fileName) != .orderedSame } ?? false
-                let fsLoc = fsName.map { $0.localizedCaseInsensitiveCompare(fileName) != .orderedSame } ?? false
-                let loctableLoc = loctable.map { $0.localizedCaseInsensitiveCompare(fileName) != .orderedSame } ?? false
-                if finderLoc { finderDiff += 1 }
-                if plistLoc { plistDiff += 1 }
-                if fsLoc { fsDiff += 1 }
-                if loctableLoc { loctableDiff += 1 }
-                if finderLoc || plistLoc || fsLoc || loctableLoc {
-                    diag.append("[Apposto] file=\(q(fileName)) loctable=\(q(loctable)) finder=\(q(finderName)) plist=\(q(localizedPlist)) base=\(q(baseName))")
-                }
-                // Sonda mirata su alcune app di sistema note per essere localizzate:
-                // mostra se il loctable esiste e quali lingue contiene.
-                if ["Disk Utility", "Dictionary", "Calculator", "Reminders",
-                    "Maps", "Notes", "System Settings", "Console"].contains(fileName) {
-                    print("[Apposto][probe] \(q(fileName)) loctable=\(q(loctable)) \(loctableInfo(url)) lproj=\(lprojList(url))")
-                }
-
                 // "Data di aggiunta" come in Finder; fallback alla creazione.
                 let dateAdded = values?.addedToDirectoryDate ?? values?.creationDate
 
@@ -128,14 +106,10 @@ enum AppScanner {
                                      url: url,
                                      bundleIdentifier: bundleID,
                                      aliases: aliases,
+                                     originalName: originalName,
                                      dateAdded: dateAdded))
             }
         }
-
-        // --- Riepilogo diagnostica nomi localizzati (temporanea) ---
-        print("[Apposto] SCAN nomi: totale=\(items.count)  loctable!=file=\(loctableDiff)  displayName!=file=\(finderDiff)  localizedInfoDictionary!=file=\(plistDiff)  localizedNameKey!=file=\(fsDiff)")
-        for line in diag.prefix(80) { print(line) }
-        if diag.count > 80 { print("[Apposto] ...e altre \(diag.count - 80) app con nome localizzato") }
 
         return items.sorted {
             $0.name.localizedStandardCompare($1.name) == .orderedAscending
@@ -194,22 +168,5 @@ enum AppScanner {
             }
         }
         return nil
-    }
-
-    // --- Helper diagnostici (temporanei) ---
-
-    private static func loctableInfo(_ bundleURL: URL) -> String {
-        let res = bundleURL.appendingPathComponent("Contents/Resources")
-        if let byLang = loadPlistDict(res.appendingPathComponent("InfoPlist.loctable")) {
-            return "loctable_langs=[\(byLang.keys.sorted().joined(separator: ","))]"
-        }
-        return "loctable=ASSENTE"
-    }
-
-    private static func lprojList(_ bundleURL: URL) -> String {
-        let res = bundleURL.appendingPathComponent("Contents/Resources").path
-        let items = (try? FileManager.default.contentsOfDirectory(atPath: res)) ?? []
-        let lprojs = items.filter { $0.hasSuffix(".lproj") }.sorted()
-        return "[\(lprojs.prefix(25).joined(separator: ","))]"
     }
 }
