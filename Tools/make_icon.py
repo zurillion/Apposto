@@ -90,26 +90,30 @@ def build():
     held = [432, 300, 432+160, 300+160]
     hrad = 36
     content.alpha_composite(soft_shadow(S, held, hrad, blur=22, alpha=70, offset=(0, 26)))
+
+    # Pollice: parte dal palmo, scende DIETRO la tile e afferra da sotto. Palmo
+    # e tile lo coprono: se ne intravede solo la punta sotto il bordo inferiore.
+    content.alpha_composite(rotated_rrect(52, 224, 26, PEACH, angle=-7, center=(474, 372)))
+
+    # Tile tenuta (copre la parte centrale del pollice)
     tile(content, held, hrad, CORAL)
 
+    # Palmo + 4 dita davanti (il palmo copre l'attacco del pollice in alto)
+    hand = Image.new("RGBA", (S, S), (0, 0, 0, 0))
+    dh = ImageDraw.Draw(hand)
+    dh.rounded_rectangle([432, 230, 600, 314], radius=42, fill=PEACH)
+    for fx, fy in [(448, 360), (485, 372), (522, 368), (559, 356)]:
+        dh.rounded_rectangle([fx, 292, fx+30, fy], radius=15, fill=PEACH)
+    content.alpha_composite(hand)
+
+    # Freccia verso lo slot di destinazione
     ax = 512
     adr = ImageDraw.Draw(content)
-    y = 478
+    y = 490
     while y < 612:
         adr.line([ax, y, ax, min(y+24, 612)], fill=(255, 255, 255, 200), width=10)
         y += 40
     adr.polygon([(ax-22, 612), (ax+22, 612), (ax, 648)], fill=(255, 255, 255, 220))
-
-    hand = Image.new("RGBA", (S, S), (0, 0, 0, 0))
-    dh = ImageDraw.Draw(hand)
-    # palmo appena sopra la tile
-    dh.rounded_rectangle([432, 232, 600, 312], radius=40, fill=PEACH)
-    # 4 dita che scavalcano il bordo superiore della tile
-    for fx, fy in [(448, 360), (485, 372), (522, 368), (559, 356)]:
-        dh.rounded_rectangle([fx, 292, fx+30, fy], radius=15, fill=PEACH)
-    # pollice: capsula inclinata che preme sul lato sinistro della tile
-    hand.alpha_composite(rotated_rrect(42, 112, 21, PEACH, angle=32, center=(436, 352)))
-    content.alpha_composite(hand)
 
     img.alpha_composite(Image.composite(content, Image.new("RGBA", (S, S), (0, 0, 0, 0)), mask))
     return img
