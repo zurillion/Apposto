@@ -1,6 +1,20 @@
 import Foundation
 import Combine
 
+/// Un gruppo di sinonimi: tag che vengono assegnati/rimossi insieme.
+/// `text` è la stringa modificabile ("tag1, tag2, …"); `tags` la sua versione
+/// suddivisa.
+struct SynonymGroup: Codable, Identifiable {
+    var id = UUID()
+    var text: String = ""
+
+    var tags: [String] {
+        text.components(separatedBy: ",")
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+    }
+}
+
 /// Database persistente dei tag associati alle applicazioni.
 ///
 /// I tag sono **case-insensitive** e possono contenere spazi. Internamente si
@@ -15,12 +29,16 @@ final class TagStore: ObservableObject {
     @Published private(set) var displayByCanonical: [String: String] = [:]
     /// appID → insieme di tag canonici.
     @Published private(set) var tagsByApp: [String: Set<String>] = [:]
+    /// Gruppi di sinonimi configurati dall'utente.
+    @Published var synonymGroups: [SynonymGroup] = [] { didSet { if isLoaded { save() } } }
 
     private let fileURL: URL?
+    private var isLoaded = false
 
     init() {
         fileURL = TagStore.makeFileURL()
         load()
+        isLoaded = true
     }
 
     /// Forma canonica di un tag: trim, spazi interni collassati, minuscolo.
@@ -67,24 +85,59 @@ final class TagStore: ObservableObject {
     func addTag(_ raw: String, to appIDs: [String]) {
         let canon = TagStore.canonical(raw)
         guard !canon.isEmpty else { return }
-        if displayByCanonical[canon] == nil {
-            displayByCanonical[canon] = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // Espande con i sinonimi: il tag più tutti quelli dei suoi gruppi.
+        var expansion = synonymExpansion(of: canon)
+        if expansion[canon] == nil {
+            expansion[canon] = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         }
-        for id in appIDs {
-            tagsByApp[id, default: []].insert(canon)
+
+        for (c, display) in expansion {
+            if displayByCanonical[c] == nil { displayByCanonical[c] = display }
+            for id in appIDs {
+                tagsByApp[id, default: []].insert(c)
+            }
         }
         save()
     }
 
     func removeTag(canonical canon: String, from appIDs: [String]) {
+        // Rimuove il tag e tutti i suoi sinonimi.
+        var toRemove = Set(synonymExpansion(of: canon).keys)
+        toRemove.insert(canon)
+
         for id in appIDs {
-            tagsByApp[id]?.remove(canon)
+            for c in toRemove { tagsByApp[id]?.remove(c) }
             if tagsByApp[id]?.isEmpty == true { tagsByApp[id] = nil }
         }
-        // Se nessuna app usa più il tag, dimentica anche la sua grafia.
-        let stillUsed = tagsByApp.values.contains { $0.contains(canon) }
-        if !stillUsed { displayByCanonical[canon] = nil }
+        // Dimentica la grafia dei tag non più usati da nessuna app.
+        for c in toRemove where !tagsByApp.values.contains(where: { $0.contains(c) }) {
+            displayByCanonical[c] = nil
+        }
         save()
+    }
+
+    // MARK: - Sinonimi
+
+    /// Per un tag canonico, restituisce tutti i tag dei gruppi che lo contengono
+    /// (canonico → grafia), incluso il tag stesso.
+    private func synonymExpansion(of canon: String) -> [String: String] {
+        var result: [String: String] = [:]
+        for group in synonymGroups where group.tags.contains(where: { TagStore.canonical($0) == canon }) {
+            for tag in group.tags {
+                let c = TagStore.canonical(tag)
+                if !c.isEmpty { result[c] = tag.trimmingCharacters(in: .whitespaces) }
+            }
+        }
+        return result
+    }
+
+    func addSynonymGroup() {
+        synonymGroups.append(SynonymGroup())
+    }
+
+    func removeSynonymGroup(_ id: UUID) {
+        synonymGroups.removeAll { $0.id == id }
     }
 
     // MARK: - Persistenza
@@ -92,6 +145,7 @@ final class TagStore: ObservableObject {
     private struct Payload: Codable {
         var displayByCanonical: [String: String]
         var tagsByApp: [String: [String]]
+        var synonymGroups: [SynonymGroup]?
     }
 
     private static func makeFileURL() -> URL? {
@@ -108,12 +162,14 @@ final class TagStore: ObservableObject {
               let payload = try? JSONDecoder().decode(Payload.self, from: data) else { return }
         displayByCanonical = payload.displayByCanonical
         tagsByApp = payload.tagsByApp.mapValues { Set($0) }
+        synonymGroups = payload.synonymGroups ?? []
     }
 
     private func save() {
         guard let fileURL else { return }
         let payload = Payload(displayByCanonical: displayByCanonical,
-                              tagsByApp: tagsByApp.mapValues { Array($0) })
+                              tagsByApp: tagsByApp.mapValues { Array($0) },
+                              synonymGroups: synonymGroups)
         guard let data = try? JSONEncoder().encode(payload) else { return }
         try? FileManager.default.createDirectory(at: fileURL.deletingLastPathComponent(),
                                                  withIntermediateDirectories: true)

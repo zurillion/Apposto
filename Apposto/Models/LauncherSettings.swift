@@ -26,6 +26,7 @@ final class LauncherSettings: ObservableObject {
         static let sortField = "sortField"
         static let sortAscending = "sortAscending"
         static let showTagIndicator = "showTagIndicator"
+        static let theme = "theme"
     }
 
     /// Valori di default della scorciatoia globale: ⌃⌥⌘ + Spazio.
@@ -64,6 +65,9 @@ final class LauncherSettings: ObservableObject {
     /// Mostra un pallino sulle app che hanno almeno un tag.
     @Published var showTagIndicator: Bool { didSet { defaults.set(showTagIndicator, forKey: Keys.showTagIndicator) } }
 
+    /// Tema colorato selezionato.
+    @Published var theme: AppTheme { didSet { defaults.set(theme.rawValue, forKey: Keys.theme) } }
+
     init() {
         iconSize = (defaults.object(forKey: Keys.iconSize) as? Double) ?? 72
         spacing = (defaults.object(forKey: Keys.spacing) as? Double) ?? 24
@@ -75,6 +79,7 @@ final class LauncherSettings: ObservableObject {
         sortField = SortField(rawValue: defaults.string(forKey: Keys.sortField) ?? "") ?? .name
         sortAscending = (defaults.object(forKey: Keys.sortAscending) as? Bool) ?? true
         showTagIndicator = (defaults.object(forKey: Keys.showTagIndicator) as? Bool) ?? true
+        theme = AppTheme(rawValue: defaults.string(forKey: Keys.theme) ?? "") ?? .blue
     }
 
     /// Riporta la scorciatoia al valore di default.

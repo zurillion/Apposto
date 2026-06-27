@@ -15,6 +15,7 @@ struct AppostoApp: App {
             SettingsView()
                 .environmentObject(appDelegate.settings)
                 .environmentObject(appDelegate.model)
+                .environmentObject(appDelegate.tagStore)
         }
     }
 }

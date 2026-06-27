@@ -43,7 +43,7 @@ struct AppIconView: View {
         )
         .overlay(
             RoundedRectangle(cornerRadius: 14)
-                .strokeBorder(Color.accentColor, lineWidth: isSelected ? 2 : 0)
+                .strokeBorder(settings.theme.color, lineWidth: isSelected ? 2 : 0)
         )
         .contentShape(RoundedRectangle(cornerRadius: 14))
         .onHover { hovering = $0 }
@@ -58,7 +58,7 @@ struct AppIconView: View {
     }
 
     private var backgroundColor: Color {
-        if isSelected { return Color.accentColor.opacity(0.22) }
+        if isSelected { return settings.theme.color.opacity(0.22) }
         if hovering { return Color.primary.opacity(0.12) }
         return Color.clear
     }
@@ -68,7 +68,7 @@ struct AppIconView: View {
         if settings.showTagIndicator && hasTags {
             let dot = min(max(iconSize * 0.18, 8), 16)
             Circle()
-                .fill(Color.accentColor)
+                .fill(settings.theme.color)
                 .frame(width: dot, height: dot)
                 .overlay(Circle().strokeBorder(Color(nsColor: .windowBackgroundColor), lineWidth: 1.5))
                 .offset(x: -2, y: 2)

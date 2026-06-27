@@ -52,6 +52,7 @@ struct LauncherRootView: View {
             }
         }
         .background(VisualEffectBackground().ignoresSafeArea())
+        .tint(settings.theme.color)
         .onAppear {
             model.visibleAppIDs = visible.map(\.id)
             indexSizesIfNeeded()
