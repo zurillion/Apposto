@@ -35,6 +35,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         model.onRequestClose = { [weak self] in self?.hideLauncher() }
         model.loadInitial()
 
+        applyDockIcon()
         setupStatusItem()
         setupBindings()
         setupEventMonitors()
@@ -42,6 +43,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Primo avvio: mostra subito il launcher per dare un riscontro visibile.
         showLauncher()
+    }
+
+    /// Forza l'icona del Dock leggendola dall'asset catalog. Aggira due problemi
+    /// noti di macOS: la cache di IconServices (che può aver memorizzato l'icona
+    /// generica dai primi avvii fatti prima di aggiungere l'icona) e la
+    /// transizione `.accessory → .regular`, che a volte mostra l'icona generica
+    /// finché non la si imposta esplicitamente.
+    private func applyDockIcon() {
+        if let icon = NSImage(named: "AppIcon") {
+            NSApp.applicationIconImage = icon
+        }
     }
 
     // Mantiene l'app viva anche quando la finestra Preferenze viene chiusa.
@@ -129,6 +141,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // passiamo temporaneamente a .regular per mostrare le Preferenze a
         // fuoco; torniamo a .accessory alla chiusura (vedi observer).
         _ = NSApp.setActivationPolicy(.regular)
+        applyDockIcon()
         NSApp.activate(ignoringOtherApps: true)
         if #available(macOS 14.0, *) {
             NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
@@ -159,8 +172,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             .store(in: &cancellables)
 
         settings.$showInDock
-            .sink { show in
+            .sink { [weak self] show in
                 _ = NSApp.setActivationPolicy(show ? .regular : .accessory)
+                if show { self?.applyDockIcon() }
             }
             .store(in: &cancellables)
     }
