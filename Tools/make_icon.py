@@ -32,6 +32,16 @@ def soft_shadow(size, box, radius, blur, alpha, offset=(0, 0)):
     ImageDraw.Draw(layer).rounded_rectangle(bx, radius=radius, fill=(0, 0, 0, alpha))
     return layer.filter(ImageFilter.GaussianBlur(blur))
 
+def rotated_rrect(w, h, radius, color, angle, center):
+    """Rettangolo arrotondato ruotato, composto a tutta tela centrato in `center`."""
+    pad = 24
+    l = Image.new("RGBA", (w + 2*pad, h + 2*pad), (0, 0, 0, 0))
+    ImageDraw.Draw(l).rounded_rectangle([pad, pad, pad+w, pad+h], radius=radius, fill=color)
+    l = l.rotate(angle, expand=True, resample=Image.BICUBIC)
+    layer = Image.new("RGBA", (S, S), (0, 0, 0, 0))
+    layer.alpha_composite(l, (int(center[0]-l.width/2), int(center[1]-l.height/2)))
+    return layer
+
 def tile(layer, box, radius, color):
     ImageDraw.Draw(layer).rounded_rectangle(box, radius=radius, fill=color)
     x0, y0, x1, y1 = box
@@ -92,11 +102,13 @@ def build():
 
     hand = Image.new("RGBA", (S, S), (0, 0, 0, 0))
     dh = ImageDraw.Draw(hand)
-    dh.rounded_rectangle([398, 300, 442, 378], radius=20, fill=PEACH_D)
-    dh.rounded_rectangle([430, 232, 602, 312], radius=40, fill=PEACH)
-    for fx, fy in [(442, 360), (480, 372), (518, 368), (556, 356)]:
-        dh.rounded_rectangle([fx, 292, fx+32, fy], radius=16, fill=PEACH)
-    dh.rounded_rectangle([430, 300, 602, 314], radius=8, fill=(228, 178, 132, 120))
+    # palmo appena sopra la tile
+    dh.rounded_rectangle([432, 232, 600, 312], radius=40, fill=PEACH)
+    # 4 dita che scavalcano il bordo superiore della tile
+    for fx, fy in [(448, 360), (485, 372), (522, 368), (559, 356)]:
+        dh.rounded_rectangle([fx, 292, fx+30, fy], radius=15, fill=PEACH)
+    # pollice: capsula inclinata che preme sul lato sinistro della tile
+    hand.alpha_composite(rotated_rrect(42, 112, 21, PEACH, angle=32, center=(436, 352)))
     content.alpha_composite(hand)
 
     img.alpha_composite(Image.composite(content, Image.new("RGBA", (S, S), (0, 0, 0, 0)), mask))
