@@ -108,14 +108,30 @@ struct LauncherRootView: View {
         guard !canon.isEmpty else { return }
 
         let known = tagStore.displayByCanonical
-        let candidates = known.keys.filter { $0.hasPrefix(canon) }
+        let special = SearchQuery.untaggedKeywords
+        let tagMatches = known.keys.filter { $0.hasPrefix(canon) }
+        let specialMatches = special.filter { $0.hasPrefix(canon) }
 
-        if known[canon] != nil || candidates.count == 1 {
-            let chosen = candidates.count == 1 ? candidates[0] : canon
+        // Tag virtuale "senza tag": resta come testo (#untagged), interpretato
+        // dalla ricerca; non diventa un chip.
+        if special.contains(canon) || (specialMatches.count == 1 && tagMatches.isEmpty) {
+            let kw = special.contains(canon) ? canon : specialMatches[0]
+            searchText.replaceSubrange(hashRange.upperBound..., with: kw)
+            return
+        }
+
+        // Tag reale esistente o match unico → diventa chip.
+        if known[canon] != nil || (tagMatches.count == 1 && specialMatches.isEmpty) {
+            let chosen = tagMatches.count == 1 ? tagMatches[0] : canon
             if !committedTags.contains(chosen) { committedTags.append(chosen) }
             searchText.removeSubrange(hashRange.lowerBound...)
-        } else if candidates.count > 1 {
-            let common = longestCommonPrefix(candidates)
+            return
+        }
+
+        // Ambiguo: estendi al prefisso comune di tutti i candidati.
+        let all = Array(tagMatches) + specialMatches
+        if all.count > 1 {
+            let common = longestCommonPrefix(all)
             if common.count > canon.count {
                 searchText.replaceSubrange(hashRange.upperBound..., with: common)
             }
@@ -155,23 +171,26 @@ struct LauncherRootView: View {
             .padding(.top, 14)
             .padding(.bottom, 10)
 
-            let tags = tagStore.allTags
-            if tags.isEmpty {
-                Text("Nessun tag")
-                    .font(.system(size: 12))
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 14)
-                Spacer()
-            } else {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 2) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 2) {
+                    let tags = tagStore.allTags
+                    if tags.isEmpty {
+                        Text("Nessun tag")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 6)
+                    } else {
                         ForEach(tags, id: \.self) { tag in
                             tagRow(tag)
                         }
                     }
-                    .padding(.horizontal, 8)
-                    .padding(.bottom, 10)
+
+                    Divider().padding(.vertical, 4)
+                    untaggedRow
                 }
+                .padding(.horizontal, 8)
+                .padding(.bottom, 10)
             }
         }
         .frame(width: 210)
@@ -208,6 +227,36 @@ struct LauncherRootView: View {
     private func selectOnlyTag(_ displayTag: String) {
         committedTags = [TagStore.canonical(displayTag)]
         searchText = ""
+    }
+
+    /// Voce speciale in fondo all'elenco: filtra le app senza alcun tag.
+    private var untaggedRow: some View {
+        let active = committedTags.isEmpty &&
+            SearchQuery.parse(searchText, knownCanonicalTags: []).requireUntagged
+        let color = Color.orange
+        return Button {
+            committedTags = []
+            searchText = "#untagged"
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "tag.slash")
+                    .font(.system(size: 9))
+                    .foregroundStyle(color)
+                Text("Untagged")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(color)
+                    .lineLimit(1)
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 5)
+            .background(
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(active ? color.opacity(0.20) : Color.clear)
+            )
+            .contentShape(RoundedRectangle(cornerRadius: 6))
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Sfondo a tema
