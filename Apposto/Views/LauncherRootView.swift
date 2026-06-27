@@ -4,16 +4,20 @@ import SwiftUI
 struct LauncherRootView: View {
     @EnvironmentObject var model: AppModel
     @EnvironmentObject var settings: LauncherSettings
+    @EnvironmentObject var tagStore: TagStore
 
     @State private var query = ""
     @FocusState private var searchFocused: Bool
 
-    /// App filtrate dal testo di ricerca (case e diacritici insensibili).
+    /// App filtrate dal testo di ricerca: testo libero sul nome e/o filtri per
+    /// tag scritti come `#tag` (vedi `SearchQuery`).
     private var filtered: [AppItem] {
-        let q = query.trimmingCharacters(in: .whitespaces)
-        guard !q.isEmpty else { return model.apps }
+        let raw = query.trimmingCharacters(in: .whitespaces)
+        guard !raw.isEmpty else { return model.apps }
+        let parsed = SearchQuery.parse(query, knownCanonicalTags: Array(tagStore.displayByCanonical.keys))
+        guard !parsed.isEmpty else { return model.apps }
         return model.apps.filter {
-            $0.name.range(of: q, options: [.caseInsensitive, .diacriticInsensitive]) != nil
+            parsed.matches(appName: $0.name, appTags: tagStore.canonicalTags(for: $0.id))
         }
     }
 
@@ -34,7 +38,7 @@ struct LauncherRootView: View {
                     .foregroundStyle(.secondary)
                 Spacer()
             } else {
-                PagedGridView(apps: filtered, onLaunch: model.launch)
+                PagedGridView(apps: filtered)
             }
         }
         .background(VisualEffectBackground().ignoresSafeArea())

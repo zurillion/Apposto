@@ -21,6 +21,43 @@ final class AppModel: ObservableObject {
     /// di un'app). Impostata dall'`AppDelegate`.
     var onRequestClose: (() -> Void)?
 
+    // MARK: - Selezione multipla e editor dei tag
+
+    /// App selezionate (con Shift/⌘ + clic) per l'assegnazione in blocco dei tag.
+    @Published var selectedAppIDs: Set<String> = []
+
+    /// `id` della cella su cui è ancorato il popover dei tag (nil = chiuso).
+    @Published var tagEditorAnchorID: String?
+
+    /// App a cui si applicano le modifiche dei tag nell'editor aperto.
+    @Published var tagEditorTargetIDs: [String] = []
+
+    var isTagEditorOpen: Bool { tagEditorAnchorID != nil }
+
+    func toggleSelection(_ id: String) {
+        if selectedAppIDs.contains(id) {
+            selectedAppIDs.remove(id)
+        } else {
+            selectedAppIDs.insert(id)
+        }
+    }
+
+    /// Apre l'editor dei tag: se l'app fa parte di una selezione, agisce su
+    /// tutte le app selezionate, altrimenti solo su quella.
+    func openTagEditor(anchor app: AppItem) {
+        if !selectedAppIDs.isEmpty, selectedAppIDs.contains(app.id) {
+            tagEditorTargetIDs = Array(selectedAppIDs)
+        } else {
+            tagEditorTargetIDs = [app.id]
+        }
+        tagEditorAnchorID = app.id
+    }
+
+    func closeTagEditor() {
+        tagEditorAnchorID = nil
+        tagEditorTargetIDs = []
+    }
+
     /// Caricamento iniziale: mostra subito le app dalla cache (se presente) e
     /// avvia in background una scansione aggiornata.
     func loadInitial() {
@@ -76,5 +113,7 @@ final class AppModel: ObservableObject {
     func prepareForShow() {
         currentPage = 0
         resetToken &+= 1
+        selectedAppIDs = []
+        closeTagEditor()
     }
 }

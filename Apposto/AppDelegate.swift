@@ -9,6 +9,7 @@ import Carbon.HIToolbox
 final class AppDelegate: NSObject, NSApplicationDelegate {
     let model = AppModel()
     let settings = LauncherSettings()
+    let tagStore = TagStore()
 
     private var windowController: LauncherWindowController!
     private var statusItem: NSStatusItem!
@@ -28,6 +29,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let root = LauncherRootView()
             .environmentObject(model)
             .environmentObject(settings)
+            .environmentObject(tagStore)
         windowController = LauncherWindowController(rootView: AnyView(root))
 
         model.onRequestClose = { [weak self] in self?.hideLauncher() }
@@ -152,6 +154,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func setupEventMonitors() {
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             guard let self, self.windowController.isVisible else { return event }
+            // Con l'editor dei tag aperto, lascia passare i tasti (Esc chiude il
+            // popover, le frecce muovono il cursore nel campo).
+            if self.model.isTagEditorOpen { return event }
             switch event.keyCode {
             case 53: // Esc
                 self.hideLauncher()

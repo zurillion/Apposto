@@ -1,13 +1,23 @@
 import SwiftUI
+import AppKit
 
-/// Singola cella: icona dell'app più nome opzionale, con evidenziazione al
-/// passaggio del mouse. L'icona è caricata pigramente alla comparsa.
+/// Singola cella: icona dell'app più nome opzionale.
+///
+/// Interazioni:
+/// - clic semplice → avvia l'app;
+/// - Shift/⌘ + clic → seleziona/deseleziona (per assegnare tag in blocco);
+/// - clic destro (o Ctrl + clic) → apre l'editor dei tag.
 struct AppIconView: View {
     @ObservedObject var app: AppItem
     let iconSize: Double
     let showLabel: Bool
 
+    @EnvironmentObject var model: AppModel
+    @EnvironmentObject var tagStore: TagStore
+
     @State private var hovering = false
+
+    private var isSelected: Bool { model.selectedAppIDs.contains(app.id) }
 
     var body: some View {
         VStack(spacing: 6) {
@@ -26,13 +36,28 @@ struct AppIconView: View {
         }
         .padding(8)
         .background(
+            RoundedRectangle(cornerRadius: 14).fill(backgroundColor)
+        )
+        .overlay(
             RoundedRectangle(cornerRadius: 14)
-                .fill(hovering ? Color.primary.opacity(0.12) : Color.clear)
+                .strokeBorder(Color.accentColor, lineWidth: isSelected ? 2 : 0)
         )
         .contentShape(RoundedRectangle(cornerRadius: 14))
         .onHover { hovering = $0 }
+        .onTapGesture { handleLeftClick() }
+        .overlay(RightClickCatcher { model.openTagEditor(anchor: app) })
         .help(app.name)
         .onAppear(perform: loadIconIfNeeded)
+        .popover(isPresented: popoverBinding, arrowEdge: .bottom) {
+            TagEditorView(appIDs: model.tagEditorTargetIDs, anchorName: app.name)
+                .environmentObject(tagStore)
+        }
+    }
+
+    private var backgroundColor: Color {
+        if isSelected { return Color.accentColor.opacity(0.22) }
+        if hovering { return Color.primary.opacity(0.12) }
+        return Color.clear
     }
 
     @ViewBuilder
@@ -43,9 +68,27 @@ struct AppIconView: View {
                 .interpolation(.high)
                 .aspectRatio(contentMode: .fit)
         } else {
-            // Segnaposto discreto finché l'icona non è pronta.
             RoundedRectangle(cornerRadius: iconSize * 0.2)
                 .fill(Color.primary.opacity(0.08))
+        }
+    }
+
+    private var popoverBinding: Binding<Bool> {
+        Binding(
+            get: { model.tagEditorAnchorID == app.id },
+            set: { if !$0 { model.closeTagEditor() } }
+        )
+    }
+
+    private func handleLeftClick() {
+        let mods = NSEvent.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        if mods.contains(.shift) || mods.contains(.command) {
+            model.toggleSelection(app.id)
+        } else if mods.contains(.control) {
+            model.openTagEditor(anchor: app)
+        } else {
+            model.selectedAppIDs.removeAll()
+            model.launch(app)
         }
     }
 

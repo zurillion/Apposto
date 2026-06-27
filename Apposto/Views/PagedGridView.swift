@@ -15,7 +15,6 @@ import SwiftUI
 /// icone.
 struct PagedGridView: View {
     let apps: [AppItem]
-    let onLaunch: (AppItem) -> Void
 
     @EnvironmentObject var model: AppModel
     @EnvironmentObject var settings: LauncherSettings
@@ -109,7 +108,6 @@ struct PagedGridView: View {
                     AppIconView(app: app,
                                 iconSize: settings.iconSize,
                                 showLabel: settings.showLabels)
-                        .onTapGesture { onLaunch(app) }
                 }
             }
             .padding(.horizontal, inset)

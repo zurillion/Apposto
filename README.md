@@ -25,6 +25,21 @@ densità e dimensioni delle icone, sfoglia le pagine con uno swipe.
   trascinamento, frecce **← →**, o cliccando i pallini.
 - **App "agent"**: nessuna icona nel Dock, vive nella barra dei menu.
 
+### Tag (Fase 1)
+
+- **Database tag persistente** associato alle app (per *bundle id*), salvato in
+  `~/Library/Application Support/Apposto/tags.json`. I tag sono
+  case-insensitive e possono contenere spazi.
+- **Clic destro** (o Ctrl+clic) su un'app → finestra per vedere/aggiungere
+  (esistente o nuovo, con suggerimenti) / rimuovere i tag.
+- **Selezione multipla** con **Shift/⌘ + clic** (celle evidenziate): il clic
+  destro su una di esse mostra i tag **comuni** e li aggiunge/rimuove a tutte.
+- **Ricerca per tag** con `#tag`, combinabile col nome dell'app e con più tag in
+  qualunque posizione: `#tag1 nome app #tag2`.
+
+> Fase 2 (in arrivo): completamento dei tag con **Tab** e tag completati
+> mostrati come **ovali colorati** (chip) nel campo di ricerca.
+
 ## Requisiti
 
 - **macOS 12 (Monterey) o successivo** (testato come target; funziona su
@@ -72,8 +87,10 @@ Apposto/
 │  ├─ AppScanner.swift         # scansione ricorsiva (solo metadati)
 │  ├─ AppCache.swift           # cache su disco dei metadati (avvio istantaneo)
 │  ├─ IconLoader.swift         # caricamento icone asincrono + cache in memoria
-│  ├─ AppModel.swift           # stato condiviso + azioni (reload/launch)
-│  └─ LauncherSettings.swift   # impostazioni persistite in UserDefaults
+│  ├─ AppModel.swift           # stato condiviso + azioni (reload/launch/selezione)
+│  ├─ LauncherSettings.swift   # impostazioni persistite in UserDefaults
+│  ├─ TagStore.swift           # database tag persistente (Application Support)
+│  └─ SearchQuery.swift        # parsing ricerca con #tag + nome app
 ├─ HotKey/
 │  └─ HotKeyManager.swift      # RegisterEventHotKey (Carbon), nessun permesso
 ├─ Window/
@@ -82,10 +99,12 @@ Apposto/
    ├─ LauncherRootView.swift   # ricerca + griglia
    ├─ SearchBar.swift
    ├─ PagedGridView.swift      # paginazione + layout adattivo
-   ├─ AppIconView.swift
+   ├─ AppIconView.swift        # cella: clic/selezione/clic destro + popover tag
    ├─ PageIndicator.swift      # pallini
    ├─ VisualEffectBackground.swift  # vibrancy
    ├─ ShortcutRecorder.swift   # registratore di scorciatoia + formatter
+   ├─ RightClickCatcher.swift  # intercetta solo il clic destro
+   ├─ TagEditorView.swift      # popover per gestire i tag
    └─ SettingsView.swift
 ```
 
@@ -114,6 +133,9 @@ Apposto/
 
 ## Roadmap (idee per le prossime iterazioni)
 
+- **Tag — Fase 2**: campo di ricerca con completamento dei tag tramite **Tab**
+  (tag intero se non ambiguo, prefisso comune se ambiguo) e tag completati
+  mostrati come **ovali colorati** (chip) inline.
 - Opzione per normalizzare la direzione dello swipe del trackpad in base alla
   preferenza di sistema "scorrimento naturale" (oggi si segue sempre quella
   di sistema; il trascinamento col mouse usa invece la direzione fisica).
