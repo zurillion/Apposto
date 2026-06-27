@@ -152,11 +152,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func setupEventMonitors() {
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             guard let self, self.windowController.isVisible else { return event }
-            if event.keyCode == 53 { // Esc
+            switch event.keyCode {
+            case 53: // Esc
                 self.hideLauncher()
                 return nil
+            case 123: // freccia sinistra → pagina precedente
+                self.model.stepPage(-1)
+                return nil
+            case 124: // freccia destra → pagina successiva
+                self.model.stepPage(1)
+                return nil
+            default:
+                return event
             }
-            return event
         }
 
         scrollMonitor = NSEvent.addLocalMonitorForEvents(matching: .scrollWheel) { [weak self] event in

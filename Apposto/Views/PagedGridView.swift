@@ -23,8 +23,13 @@ struct PagedGridView: View {
     var body: some View {
         GeometryReader { geo in
             let inset: CGFloat = 24
+            let topPadding: CGFloat = 20
+            let bottomReserve: CGFloat = 44   // spazio per i pallini di pagina
             let availW = max(geo.size.width - inset * 2, 1)
-            let availH = max(geo.size.height - inset * 2, 1)
+            // Le righe per pagina si calcolano sull'area utile (sotto la barra
+            // di ricerca, sopra i pallini), così le icone allineate in alto non
+            // finiscono sotto l'indicatore di pagina.
+            let availH = max(geo.size.height - topPadding - bottomReserve, 1)
 
             let cellW = settings.iconSize + 28
             let cellH = settings.iconSize + (settings.showLabels ? 34 : 8) + 8
@@ -53,7 +58,8 @@ struct PagedGridView: View {
                                 pageGrid(pages[i],
                                          gridColumns: gridColumns,
                                          spacing: spacing,
-                                         inset: inset)
+                                         inset: inset,
+                                         topPadding: topPadding)
                             } else {
                                 Color.clear
                             }
@@ -95,9 +101,9 @@ struct PagedGridView: View {
     private func pageGrid(_ pageApps: [AppItem],
                           gridColumns: [GridItem],
                           spacing: CGFloat,
-                          inset: CGFloat) -> some View {
+                          inset: CGFloat,
+                          topPadding: CGFloat) -> some View {
         VStack(spacing: 0) {
-            Spacer(minLength: 0)
             LazyVGrid(columns: gridColumns, spacing: spacing) {
                 ForEach(pageApps) { app in
                     AppIconView(app: app,
@@ -107,6 +113,8 @@ struct PagedGridView: View {
                 }
             }
             .padding(.horizontal, inset)
+            .padding(.top, topPadding)
+            // Le icone restano in alto: lo Spacer riempie lo spazio sotto.
             Spacer(minLength: 0)
         }
     }

@@ -22,7 +22,7 @@ densità e dimensioni delle icone, sfoglia le pagine con uno swipe.
 - **Ricerca istantanea** dalla barra in alto (insensibile a maiuscole/accenti);
   premi Invio per avviare il primo risultato.
 - **Pagine con indicatore a pallini**; si cambia pagina con swipe del trackpad,
-  trascinamento, o cliccando i pallini.
+  trascinamento, frecce **← →**, o cliccando i pallini.
 - **App "agent"**: nessuna icona nel Dock, vive nella barra dei menu.
 
 ## Requisiti
@@ -118,7 +118,8 @@ Apposto/
   preferenza di sistema "scorrimento naturale" (oggi si segue sempre quella
   di sistema; il trascinamento col mouse usa invece la direzione fisica).
 - Cartelle/gruppi e riordino manuale delle icone (drag & drop).
-- Navigazione completa da tastiera (frecce per selezione, Invio per avviare).
+- Navigazione completa da tastiera: selezione cella con le frecce ↑↓ (le frecce
+  ← → cambiano già pagina) e avvio con Invio della cella selezionata.
 - Scansione anche via Spotlight (`NSMetadataQuery`) per trovare app ovunque.
 - Aggiornamento live quando si installano/rimuovono app.
 - Avvio automatico al login.
