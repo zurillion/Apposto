@@ -98,14 +98,41 @@ final class AppModel: ObservableObject {
         tagEditorTargetIDs = []
     }
 
+    /// Osserva le cartelle delle applicazioni per ri-scansionare in automatico.
+    private var folderWatcher: FolderWatcher?
+    /// Debounce delle ri-scansioni innescate dal watcher.
+    private var rescanWorkItem: DispatchWorkItem?
+
     /// Caricamento iniziale: mostra subito le app dalla cache (se presente) e
-    /// avvia in background una scansione aggiornata.
+    /// avvia in background una scansione aggiornata. Avvia inoltre
+    /// l'osservazione delle cartelle per aggiornarsi quando le app cambiano.
     func loadInitial() {
         let cached = AppCache.load()
         if !cached.isEmpty {
             apps = cached
         }
         reload()
+        startWatchingFolders()
+    }
+
+    /// Inizia a osservare le cartelle delle applicazioni: a ogni cambiamento
+    /// (app installata/rimossa) ri-scansiona, con un piccolo debounce per
+    /// raggruppare le modifiche a raffica (es. durante un'installazione).
+    private func startWatchingFolders() {
+        guard folderWatcher == nil else { return }
+        let paths = AppScanner.searchRoots.map(\.path)
+        let watcher = FolderWatcher(paths: paths) { [weak self] in
+            DispatchQueue.main.async { self?.scheduleRescan() }
+        }
+        watcher.start()
+        folderWatcher = watcher
+    }
+
+    private func scheduleRescan() {
+        rescanWorkItem?.cancel()
+        let item = DispatchWorkItem { [weak self] in self?.reload() }
+        rescanWorkItem = item
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8, execute: item)
     }
 
     /// Ri-scansiona le app in background e aggiorna la lista + la cache,

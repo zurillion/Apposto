@@ -62,26 +62,34 @@ enum AppScanner {
                 guard !seen.contains(dedupKey) else { continue }
                 seen.insert(dedupKey)
 
-                let rawName = values?.localizedName ?? fm.displayName(atPath: url.path)
-                let name = rawName.hasSuffix(".app") ? String(rawName.dropLast(4)) : rawName
-
-                // Nomi alternativi per la ricerca (nome originale/inglese): il
-                // nome del file e i valori NON localizzati dell'Info.plist. Così
-                // un'app mostrata come "Calcolatrice" si trova anche con
-                // "Calculator". Escludiamo i duplicati del nome localizzato.
                 let fileName = url.deletingPathExtension().lastPathComponent
+                // Nome localizzato dell'app (come Finder/Dock/Launchpad): viene
+                // dal CFBundleDisplayName/CFBundleName *localizzato* in
+                // InfoPlist.strings, NON dal nome del file. `.localizedNameKey` e
+                // `displayName(atPath:)` restituiscono solo il nome del file con
+                // l'estensione nascosta, quindi qui non bastano.
+                let localized = clean(bundle?.localizedInfoDictionary?["CFBundleDisplayName"] as? String)
+                            ?? clean(bundle?.localizedInfoDictionary?["CFBundleName"] as? String)
+                // Nome dal file system (estensione nascosta): di norma l'inglese.
+                let fsName = clean(values?.localizedName) ?? clean(fm.displayName(atPath: url.path))
+                // Nome base NON localizzato dell'Info.plist (l'inglese "vero").
+                let baseName = clean(bundle?.infoDictionary?["CFBundleDisplayName"] as? String)
+                           ?? clean(bundle?.infoDictionary?["CFBundleName"] as? String)
+
+                // Mostrato: prima il nome localizzato dell'app, poi il file system.
+                let name = localized ?? fsName ?? fileName
+
+                // Alias per la ricerca: gli altri nomi (originale/inglese), unici
+                // e diversi dal mostrato. Così "Utility Disco" si trova anche con
+                // "Disk Utility" e viceversa.
                 var aliases: [String] = []
-                func addAlias(_ candidate: String?) {
-                    guard let c = candidate?.trimmingCharacters(in: .whitespacesAndNewlines),
-                          !c.isEmpty,
-                          c.localizedCaseInsensitiveCompare(name) != .orderedSame,
-                          !aliases.contains(where: { $0.localizedCaseInsensitiveCompare(c) == .orderedSame })
-                    else { return }
-                    aliases.append(c)
+                let candidates: [String?] = [fsName, baseName, fileName, localized]
+                for case let cand? in candidates {
+                    guard cand.localizedCaseInsensitiveCompare(name) != .orderedSame,
+                          !aliases.contains(where: { $0.localizedCaseInsensitiveCompare(cand) == .orderedSame })
+                    else { continue }
+                    aliases.append(cand)
                 }
-                addAlias(fileName)
-                addAlias(bundle?.infoDictionary?["CFBundleDisplayName"] as? String)
-                addAlias(bundle?.infoDictionary?["CFBundleName"] as? String)
 
                 // "Data di aggiunta" come in Finder; fallback alla creazione.
                 let dateAdded = values?.addedToDirectoryDate ?? values?.creationDate
@@ -98,5 +106,13 @@ enum AppScanner {
         return items.sorted {
             $0.name.localizedStandardCompare($1.name) == .orderedAscending
         }
+    }
+
+    /// Normalizza un nome candidato: trim, rimozione dell'eventuale suffisso
+    /// `.app`, `nil` se vuoto.
+    private static func clean(_ s: String?) -> String? {
+        guard var t = s?.trimmingCharacters(in: .whitespacesAndNewlines), !t.isEmpty else { return nil }
+        if t.hasSuffix(".app") { t = String(t.dropLast(4)) }
+        return t.isEmpty ? nil : t
     }
 }
