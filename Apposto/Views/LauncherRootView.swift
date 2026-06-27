@@ -11,6 +11,8 @@ struct LauncherRootView: View {
     @State private var committedTags: [String] = []
     /// Testo libero della ricerca (nome app e/o tag in corso di digitazione).
     @State private var searchText = ""
+    /// Colonna laterale a scomparsa con l'elenco dei tag.
+    @State private var showTagSidebar = false
 
     /// App filtrate: devono avere tutti i tag-chip e soddisfare il resto della
     /// query (nome e/o `#tag` ancora in digitazione, vedi `SearchQuery`).
@@ -32,7 +34,38 @@ struct LauncherRootView: View {
 
     var body: some View {
         let visible = displayedApps
-        return VStack(spacing: 0) {
+        return HStack(spacing: 0) {
+            if showTagSidebar {
+                tagSidebar
+                    .transition(.move(edge: .leading).combined(with: .opacity))
+                Divider()
+            }
+            mainColumn(visible)
+        }
+        .background(themedBackground.ignoresSafeArea())
+        .tint(settings.theme.color)
+        .onAppear {
+            model.visibleAppIDs = visible.map(\.id)
+            indexSizesIfNeeded()
+        }
+        .onChange(of: visible.map(\.id)) { ids in
+            model.visibleAppIDs = ids
+        }
+        .onChange(of: settings.sortField) { _ in indexSizesIfNeeded() }
+        .onChange(of: committedTags) { _ in model.currentPage = 0 }
+        .onChange(of: searchText) { _ in model.currentPage = 0 }
+        .onChange(of: model.resetToken) { _ in
+            committedTags = []
+            searchText = ""
+            model.currentPage = 0
+            // Uscendo e rientrando nel launcher la colonna torna nascosta.
+            showTagSidebar = false
+        }
+    }
+
+    /// Colonna principale: barra di ordinamento, ricerca e griglia.
+    private func mainColumn(_ visible: [AppItem]) -> some View {
+        VStack(spacing: 0) {
             sortBar(count: visible.count)
                 .padding(.horizontal, 24)
                 .padding(.top, 14)
@@ -60,23 +93,6 @@ struct LauncherRootView: View {
             } else {
                 PagedGridView(apps: visible)
             }
-        }
-        .background(themedBackground.ignoresSafeArea())
-        .tint(settings.theme.color)
-        .onAppear {
-            model.visibleAppIDs = visible.map(\.id)
-            indexSizesIfNeeded()
-        }
-        .onChange(of: visible.map(\.id)) { ids in
-            model.visibleAppIDs = ids
-        }
-        .onChange(of: settings.sortField) { _ in indexSizesIfNeeded() }
-        .onChange(of: committedTags) { _ in model.currentPage = 0 }
-        .onChange(of: searchText) { _ in model.currentPage = 0 }
-        .onChange(of: model.resetToken) { _ in
-            committedTags = []
-            searchText = ""
-            model.currentPage = 0
         }
     }
 
@@ -117,6 +133,83 @@ struct LauncherRootView: View {
         return prefix
     }
 
+    // MARK: - Colonna laterale dei tag
+
+    private var tagSidebar: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                Text("Tag")
+                    .font(.system(size: 13, weight: .semibold))
+                Spacer()
+                Button {
+                    withAnimation(.easeInOut(duration: 0.22)) { showTagSidebar = false }
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+                .help("Nascondi i tag")
+            }
+            .padding(.horizontal, 14)
+            .padding(.top, 14)
+            .padding(.bottom, 10)
+
+            let tags = tagStore.allTags
+            if tags.isEmpty {
+                Text("Nessun tag")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 14)
+                Spacer()
+            } else {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 2) {
+                        ForEach(tags, id: \.self) { tag in
+                            tagRow(tag)
+                        }
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.bottom, 10)
+                }
+            }
+        }
+        .frame(width: 210)
+        .background(Color.primary.opacity(0.05))
+    }
+
+    private func tagRow(_ tag: String) -> some View {
+        let isActive = committedTags == [TagStore.canonical(tag)]
+        return Button {
+            selectOnlyTag(tag)
+        } label: {
+            HStack(spacing: 8) {
+                Circle()
+                    .fill(settings.theme.color)
+                    .frame(width: 7, height: 7)
+                Text(tag)
+                    .font(.system(size: 12))
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 5)
+            .background(
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(isActive ? settings.theme.color.opacity(0.20) : Color.clear)
+            )
+            .contentShape(RoundedRectangle(cornerRadius: 6))
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// Imposta la ricerca sul solo tag scelto (un unico chip, nessun testo).
+    private func selectOnlyTag(_ displayTag: String) {
+        committedTags = [TagStore.canonical(displayTag)]
+        searchText = ""
+    }
+
     // MARK: - Sfondo a tema
 
     /// Vibrancy del pannello con sopra un velo del colore del tema, così l'intera
@@ -139,6 +232,8 @@ struct LauncherRootView: View {
     /// ricliccandolo, inverte l'ordine) e, a destra, il numero di app mostrate.
     private func sortBar(count: Int) -> some View {
         HStack(spacing: 12) {
+            sidebarToggle
+
             HStack(spacing: 4) {
                 ForEach(SortField.allCases, id: \.self) { field in
                     sortSegment(field)
@@ -155,6 +250,21 @@ struct LauncherRootView: View {
                 .foregroundStyle(.secondary)
                 .monospacedDigit()
         }
+    }
+
+    /// Pulsante che mostra/nasconde la colonna laterale dei tag.
+    private var sidebarToggle: some View {
+        Button {
+            withAnimation(.easeInOut(duration: 0.22)) { showTagSidebar.toggle() }
+        } label: {
+            Image(systemName: "sidebar.left")
+                .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(showTagSidebar ? settings.theme.color : Color.primary)
+                .frame(width: 26, height: 26)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help(showTagSidebar ? "Nascondi i tag" : "Mostra i tag")
     }
 
     private func sortSegment(_ field: SortField) -> some View {

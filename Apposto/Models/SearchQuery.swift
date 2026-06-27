@@ -17,8 +17,16 @@ struct SearchQuery {
     var prefixTags: [String] = []
     /// Testo libero: il nome dell'app deve contenerlo.
     var text: String = ""
+    /// Se vero (tag virtuale `#untagged`/`#notag`/`#no-tag`), mostra solo le app
+    /// senza alcun tag.
+    var requireUntagged = false
 
-    var isEmpty: Bool { requiredTags.isEmpty && prefixTags.isEmpty && text.isEmpty }
+    /// Tag virtuali che filtrano le app prive di tag.
+    static let untaggedKeywords = ["untagged", "notag", "no-tag", "senzatag", "senza-tag"]
+
+    var isEmpty: Bool {
+        requiredTags.isEmpty && prefixTags.isEmpty && text.isEmpty && !requireUntagged
+    }
 
     static func parse(_ raw: String, knownCanonicalTags: [String]) -> SearchQuery {
         var query = SearchQuery()
@@ -39,6 +47,15 @@ struct SearchQuery {
             let leadingTrimmed = String(segment.drop(while: { $0 == " " }))
             let lower = leadingTrimmed.lowercased()
 
+            // Tag virtuale "senza tag" (controllato prima dei tag reali).
+            if let kw = untaggedKeywords.first(where: { lower == $0 || lower.hasPrefix($0 + " ") }) {
+                query.requireUntagged = true
+                let rest = String(leadingTrimmed.dropFirst(kw.count))
+                    .trimmingCharacters(in: .whitespaces)
+                if !rest.isEmpty { textParts.append(rest) }
+                continue
+            }
+
             if let match = known.first(where: { lower.hasPrefix($0) }) {
                 query.requiredTags.append(match)
                 let rest = String(leadingTrimmed.dropFirst(match.count))
@@ -58,6 +75,7 @@ struct SearchQuery {
     /// cui può avvenire la corrispondenza (nome localizzato + alias, es. il nome
     /// originale/inglese): basta che uno contenga il testo cercato.
     func matches(appNames: [String], appTags: Set<String>) -> Bool {
+        if requireUntagged && !appTags.isEmpty { return false }
         for tag in requiredTags where !appTags.contains(tag) { return false }
         for prefix in prefixTags where !appTags.contains(where: { $0.hasPrefix(prefix) }) { return false }
         if !text.isEmpty {
