@@ -21,7 +21,7 @@ struct LauncherRootView: View {
         return model.apps.filter { app in
             let appTags = tagStore.canonicalTags(for: app.id)
             for tag in committedTags where !appTags.contains(tag) { return false }
-            return parsed.matches(appName: app.name, appTags: appTags)
+            return parsed.matches(appNames: app.searchNames, appTags: appTags)
         }
     }
 

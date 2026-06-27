@@ -54,14 +54,17 @@ struct SearchQuery {
         return query
     }
 
-    /// Verifica se un'app soddisfa la query.
-    func matches(appName: String, appTags: Set<String>) -> Bool {
+    /// Verifica se un'app soddisfa la query. `appNames` contiene tutti i nomi su
+    /// cui può avvenire la corrispondenza (nome localizzato + alias, es. il nome
+    /// originale/inglese): basta che uno contenga il testo cercato.
+    func matches(appNames: [String], appTags: Set<String>) -> Bool {
         for tag in requiredTags where !appTags.contains(tag) { return false }
         for prefix in prefixTags where !appTags.contains(where: { $0.hasPrefix(prefix) }) { return false }
         if !text.isEmpty {
-            if appName.range(of: text, options: [.caseInsensitive, .diacriticInsensitive]) == nil {
-                return false
+            let hit = appNames.contains {
+                $0.range(of: text, options: [.caseInsensitive, .diacriticInsensitive]) != nil
             }
+            if !hit { return false }
         }
         return true
     }

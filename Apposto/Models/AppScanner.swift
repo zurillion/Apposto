@@ -56,13 +56,32 @@ enum AppScanner {
                 // altrimenti ci fidiamo dell'estensione .app.
                 if let isApp = values?.isApplication, isApp == false { continue }
 
-                let bundleID = Bundle(url: url)?.bundleIdentifier
+                let bundle = Bundle(url: url)
+                let bundleID = bundle?.bundleIdentifier
                 let dedupKey = bundleID ?? url.path
                 guard !seen.contains(dedupKey) else { continue }
                 seen.insert(dedupKey)
 
                 let rawName = values?.localizedName ?? fm.displayName(atPath: url.path)
                 let name = rawName.hasSuffix(".app") ? String(rawName.dropLast(4)) : rawName
+
+                // Nomi alternativi per la ricerca (nome originale/inglese): il
+                // nome del file e i valori NON localizzati dell'Info.plist. Così
+                // un'app mostrata come "Calcolatrice" si trova anche con
+                // "Calculator". Escludiamo i duplicati del nome localizzato.
+                let fileName = url.deletingPathExtension().lastPathComponent
+                var aliases: [String] = []
+                func addAlias(_ candidate: String?) {
+                    guard let c = candidate?.trimmingCharacters(in: .whitespacesAndNewlines),
+                          !c.isEmpty,
+                          c.localizedCaseInsensitiveCompare(name) != .orderedSame,
+                          !aliases.contains(where: { $0.localizedCaseInsensitiveCompare(c) == .orderedSame })
+                    else { return }
+                    aliases.append(c)
+                }
+                addAlias(fileName)
+                addAlias(bundle?.infoDictionary?["CFBundleDisplayName"] as? String)
+                addAlias(bundle?.infoDictionary?["CFBundleName"] as? String)
 
                 // "Data di aggiunta" come in Finder; fallback alla creazione.
                 let dateAdded = values?.addedToDirectoryDate ?? values?.creationDate
@@ -71,6 +90,7 @@ enum AppScanner {
                                      name: name,
                                      url: url,
                                      bundleIdentifier: bundleID,
+                                     aliases: aliases,
                                      dateAdded: dateAdded))
             }
         }
