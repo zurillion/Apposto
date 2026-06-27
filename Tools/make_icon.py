@@ -91,17 +91,18 @@ def build():
     hrad = 36
     content.alpha_composite(soft_shadow(S, held, hrad, blur=22, alpha=70, offset=(0, 26)))
 
-    # Pollice: parte dal palmo, scende DIETRO la tile e afferra da sotto. Palmo
-    # e tile lo coprono: se ne intravede solo la punta sotto il bordo inferiore.
-    content.alpha_composite(rotated_rrect(52, 224, 26, PEACH, angle=-7, center=(474, 372)))
+    # Pollice: esce dal lato sinistro-alto del palmo e scende DIETRO la tile.
+    # Più sottile delle dita; si vede solo dove esce dal palmo (in alto a
+    # sinistra), la punta resta nascosta dietro la tile.
+    content.alpha_composite(rotated_rrect(38, 196, 19, PEACH, angle=13, center=(432, 344)))
 
-    # Tile tenuta (copre la parte centrale del pollice)
+    # Tile tenuta (copre la parte bassa del pollice -> niente punta visibile)
     tile(content, held, hrad, CORAL)
 
     # Palmo + 4 dita davanti (il palmo copre l'attacco del pollice in alto)
     hand = Image.new("RGBA", (S, S), (0, 0, 0, 0))
     dh = ImageDraw.Draw(hand)
-    dh.rounded_rectangle([432, 230, 600, 314], radius=42, fill=PEACH)
+    dh.rounded_rectangle([430, 228, 600, 314], radius=42, fill=PEACH)
     for fx, fy in [(448, 360), (485, 372), (522, 368), (559, 356)]:
         dh.rounded_rectangle([fx, 292, fx+30, fy], radius=15, fill=PEACH)
     content.alpha_composite(hand)
