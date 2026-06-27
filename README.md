@@ -34,7 +34,8 @@ densità e dimensioni delle icone, sfoglia le pagine con uno swipe.
   `~/Library/Application Support/Apposto/tags.json`. I tag sono
   case-insensitive e possono contenere spazi.
 - **Clic destro** (o Ctrl+clic) su un'app → finestra per vedere/aggiungere
-  (esistente o nuovo, con suggerimenti) / rimuovere i tag.
+  (esistente o nuovo, con suggerimenti) / rimuovere i tag. Mentre scrivi,
+  **Tab** completa il tag fino al punto non ambiguo (tutto, se il match è unico).
 - **Selezione multipla** (celle evidenziate): **⌘ + clic** aggiunge/toglie la
   singola app, **Shift + clic** seleziona l'intervallo dalla prima selezionata
   fino alla cella cliccata. Un clic semplice (su un'icona o nel vuoto) annulla
@@ -115,6 +116,7 @@ Apposto/
    ├─ ShortcutRecorder.swift   # registratore di scorciatoia + formatter
    ├─ RightClickCatcher.swift  # intercetta solo il clic destro
    ├─ TagEditorView.swift      # popover per gestire i tag
+   ├─ TagInputField.swift      # campo tag con completamento via Tab
    └─ SettingsView.swift
 ```
 

@@ -10,7 +10,6 @@ struct TagEditorView: View {
 
     @EnvironmentObject var tagStore: TagStore
     @State private var newTag = ""
-    @FocusState private var fieldFocused: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -47,10 +46,11 @@ struct TagEditorView: View {
 
             Divider()
 
-            TextField("Aggiungi tag…", text: $newTag)
-                .textFieldStyle(.roundedBorder)
-                .focused($fieldFocused)
-                .onSubmit { commit(newTag) }
+            TagInputField(text: $newTag,
+                          placeholder: "Aggiungi tag…",
+                          onTab: autocomplete,
+                          onSubmit: { commit(newTag) })
+                .frame(height: 22)
 
             let sugg = suggestions
             if !sugg.isEmpty {
@@ -75,7 +75,6 @@ struct TagEditorView: View {
         }
         .padding(14)
         .frame(width: 260)
-        .onAppear { fieldFocused = true }
     }
 
     private var title: String {
@@ -86,17 +85,48 @@ struct TagEditorView: View {
         appIDs.count <= 1 ? tagStore.tags(for: appIDs.first ?? "") : tagStore.commonTags(for: appIDs)
     }
 
-    private var suggestions: [String] {
+    /// Tag esistenti che iniziano col testo digitato (esclusi quelli già
+    /// applicati). Usati sia per i suggerimenti sia per il completamento.
+    private var matchingTags: [String] {
         let query = TagStore.canonical(newTag)
         guard !query.isEmpty else { return [] }
         let alreadyApplied = Set(currentTags.map { TagStore.canonical($0) })
-        return tagStore.allTags
-            .filter { tag in
-                let canon = TagStore.canonical(tag)
-                return canon.hasPrefix(query) && !alreadyApplied.contains(canon)
-            }
-            .prefix(8)
-            .map { $0 }
+        return tagStore.allTags.filter { tag in
+            let canon = TagStore.canonical(tag)
+            return canon.hasPrefix(query) && !alreadyApplied.contains(canon)
+        }
+    }
+
+    private var suggestions: [String] { Array(matchingTags.prefix(8)) }
+
+    /// Tab: completa il testo fino al punto non ambiguo (prefisso comune dei
+    /// match); se il match è unico, completa l'intero tag.
+    private func autocomplete() {
+        let matches = matchingTags
+        guard !matches.isEmpty else { return }
+        if matches.count == 1 {
+            newTag = matches[0]
+        } else {
+            let common = TagEditorView.longestCommonPrefix(matches)
+            if common.count > newTag.count { newTag = common }
+        }
+    }
+
+    /// Prefisso comune (case-insensitive) restituito con la grafia del primo.
+    private static func longestCommonPrefix(_ strings: [String]) -> String {
+        guard let first = strings.first else { return "" }
+        let firstChars = Array(first)
+        let firstLower = Array(first.lowercased())
+        var length = firstChars.count
+        for s in strings.dropFirst() {
+            let lower = Array(s.lowercased())
+            var i = 0
+            let limit = min(length, lower.count)
+            while i < limit && firstLower[i] == lower[i] { i += 1 }
+            length = i
+            if length == 0 { break }
+        }
+        return String(firstChars.prefix(length))
     }
 
     private func commit(_ raw: String) {
@@ -104,6 +134,5 @@ struct TagEditorView: View {
         guard !trimmed.isEmpty, !appIDs.isEmpty else { return }
         tagStore.addTag(trimmed, to: appIDs)
         newTag = ""
-        fieldFocused = true
     }
 }
