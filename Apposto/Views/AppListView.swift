@@ -47,7 +47,9 @@ struct AppListView: View {
                 .frame(width: ListLayout.date, alignment: .leading)
             sortHeader("Dimensione", field: .size, alignment: .trailing)
                 .frame(width: ListLayout.size, alignment: .trailing)
-            Color.clear.frame(width: ListLayout.update)
+            // Spaziatore allineato alla colonna del badge update (altezza
+            // vincolata: altrimenti Color.clear si espande in verticale).
+            Color.clear.frame(width: ListLayout.update, height: 1)
         }
         .font(.system(size: 11, weight: .semibold))
         .foregroundStyle(.secondary)
@@ -132,7 +134,6 @@ struct AppRowView: View {
                 .frame(width: ListLayout.size, alignment: .trailing)
 
             updateBadge
-                .frame(width: ListLayout.update)
         }
         .font(.system(size: 12))
         .lineLimit(1)
@@ -173,16 +174,21 @@ struct AppRowView: View {
         }
     }
 
-    @ViewBuilder
+    /// Cella del badge update: larghezza sempre riservata (Color.clear di base),
+    /// badge centrato sopra quando c'è un aggiornamento.
     private var updateBadge: some View {
-        if let info = model.updatesByID[app.id] {
-            let color: Color = info.source == "App Store" ? .blue : .green
-            Image(systemName: "arrow.up.circle.fill")
-                .symbolRenderingMode(.palette)
-                .foregroundStyle(.white, color)
-                .font(.system(size: 14))
-                .help("Aggiornamento disponibile: \(info.latestVersion) (\(info.source))")
+        ZStack {
+            Color.clear
+            if let info = model.updatesByID[app.id] {
+                let color: Color = info.source == "App Store" ? .blue : .green
+                Image(systemName: "arrow.up.circle.fill")
+                    .symbolRenderingMode(.palette)
+                    .foregroundStyle(.white, color)
+                    .font(.system(size: 14))
+                    .help("Aggiornamento disponibile: \(info.latestVersion) (\(info.source))")
+            }
         }
+        .frame(width: ListLayout.update, height: ListLayout.rowHeight)
     }
 
     private var rowBackground: some View {
