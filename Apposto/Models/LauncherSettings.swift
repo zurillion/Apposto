@@ -36,6 +36,7 @@ final class LauncherSettings: ObservableObject {
         static let showTagIndicator = "showTagIndicator"
         static let showOriginalName = "showOriginalName"
         static let showIntelBadge = "showIntelBadge"
+        static let showVersion = "showVersion"
         static let theme = "theme"
     }
 
@@ -81,6 +82,9 @@ final class LauncherSettings: ObservableObject {
     /// Mostra un badge "Intel" sulle app solo-Intel (senza slice arm64).
     @Published var showIntelBadge: Bool { didSet { defaults.set(showIntelBadge, forKey: Keys.showIntelBadge) } }
 
+    /// Mostra la versione dell'app sotto al nome.
+    @Published var showVersion: Bool { didSet { defaults.set(showVersion, forKey: Keys.showVersion) } }
+
     /// Tema colorato selezionato.
     @Published var theme: AppTheme { didSet { defaults.set(theme.rawValue, forKey: Keys.theme) } }
 
@@ -97,6 +101,7 @@ final class LauncherSettings: ObservableObject {
         showTagIndicator = (defaults.object(forKey: Keys.showTagIndicator) as? Bool) ?? true
         showOriginalName = (defaults.object(forKey: Keys.showOriginalName) as? Bool) ?? false
         showIntelBadge = (defaults.object(forKey: Keys.showIntelBadge) as? Bool) ?? false
+        showVersion = (defaults.object(forKey: Keys.showVersion) as? Bool) ?? false
         theme = AppTheme(rawValue: defaults.string(forKey: Keys.theme) ?? "") ?? .blue
     }
 

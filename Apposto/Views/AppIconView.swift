@@ -43,6 +43,14 @@ struct AppIconView: View {
                             .lineLimit(1)
                             .truncationMode(.tail)
                     }
+
+                    if settings.showVersion, let version = app.version {
+                        Text("v\(version)")
+                            .font(.system(size: 9))
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                    }
                 }
                 .frame(maxWidth: iconSize + 24)
                 .fixedSize(horizontal: false, vertical: true)

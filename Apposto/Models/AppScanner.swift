@@ -98,6 +98,9 @@ enum AppScanner {
                     aliases.append(cand)
                 }
 
+                let version = clean(bundle?.infoDictionary?["CFBundleShortVersionString"] as? String)
+                          ?? clean(bundle?.infoDictionary?["CFBundleVersion"] as? String)
+
                 // "Data di aggiunta" come in Finder; fallback alla creazione.
                 let dateAdded = values?.addedToDirectoryDate ?? values?.creationDate
 
@@ -108,6 +111,7 @@ enum AppScanner {
                                      aliases: aliases,
                                      originalName: originalName,
                                      isIntelOnly: isIntelOnly(bundle),
+                                     version: version,
                                      dateAdded: dateAdded))
             }
         }

@@ -26,6 +26,9 @@ final class AppItem: ObservableObject, Identifiable {
     /// non arm64: gira solo tramite Rosetta sui Mac Apple Silicon.
     let isIntelOnly: Bool
 
+    /// Versione dell'app (`CFBundleShortVersionString`), da mostrare opzionalmente.
+    let version: String?
+
     /// Data in cui l'app è stata aggiunta alla cartella (per l'ordinamento).
     let dateAdded: Date?
 
@@ -38,7 +41,8 @@ final class AppItem: ObservableObject, Identifiable {
 
     init(id: String, name: String, url: URL, bundleIdentifier: String?,
          aliases: [String] = [], originalName: String? = nil,
-         isIntelOnly: Bool = false, dateAdded: Date? = nil, icon: NSImage? = nil) {
+         isIntelOnly: Bool = false, version: String? = nil,
+         dateAdded: Date? = nil, icon: NSImage? = nil) {
         self.id = id
         self.name = name
         self.url = url
@@ -46,6 +50,7 @@ final class AppItem: ObservableObject, Identifiable {
         self.aliases = aliases
         self.originalName = originalName
         self.isIntelOnly = isIntelOnly
+        self.version = version
         self.dateAdded = dateAdded
         self.icon = icon
     }

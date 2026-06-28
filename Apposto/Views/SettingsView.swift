@@ -105,6 +105,8 @@ private struct AppearanceSettingsTab: View {
                 Text("Sotto al nome localizzato mostra il nome originale (non tradotto), in grigio.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                Toggle("Mostra la versione", isOn: $settings.showVersion)
+                    .disabled(!settings.showLabels)
             }
 
             Section("Griglia") {

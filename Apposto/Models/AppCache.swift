@@ -12,6 +12,7 @@ enum AppCache {
         var aliases: [String]?
         var originalName: String?
         var isIntelOnly: Bool?
+        var version: String?
         var dateAdded: Double?
     }
 
@@ -35,6 +36,7 @@ enum AppCache {
                     aliases: $0.aliases ?? [],
                     originalName: $0.originalName,
                     isIntelOnly: $0.isIntelOnly ?? false,
+                    version: $0.version,
                     dateAdded: $0.dateAdded.map { Date(timeIntervalSince1970: $0) })
         }
     }
@@ -47,6 +49,7 @@ enum AppCache {
                   aliases: $0.aliases.isEmpty ? nil : $0.aliases,
                   originalName: $0.originalName,
                   isIntelOnly: $0.isIntelOnly ? true : nil,
+                  version: $0.version,
                   dateAdded: $0.dateAdded?.timeIntervalSince1970)
         }
         guard let data = try? JSONEncoder().encode(entries) else { return }
