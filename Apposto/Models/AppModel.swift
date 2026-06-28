@@ -12,6 +12,12 @@ final class AppModel: ObservableObject {
     @Published private(set) var sizesByID: [String: Int64] = [:]
     private var sizeIndexingInProgress = false
 
+    /// App con un aggiornamento disponibile (appID → info), per il badge.
+    @Published private(set) var updatesByID: [String: UpdateInfo] = [:]
+    /// Se vero, controlla gli aggiornamenti in background (impostato dall'utente).
+    var updatesEnabled = false
+    private let updateTTL: TimeInterval = 60 * 60 * 24  // 24h
+
     /// Pagina visualizzata. Aggiornata da swipe, drag e pallini.
     @Published var currentPage = 0
 
@@ -169,6 +175,86 @@ final class AppModel: ObservableObject {
         if !sizesByID.isEmpty {
             sizeIndexingInProgress = false
             ensureSizesIndexed()
+        }
+
+        if updatesEnabled { refreshUpdates() }
+    }
+
+    // MARK: - Controllo aggiornamenti
+
+    /// Abilita/disabilita il controllo aggiornamenti e avvia/azzera di conseguenza.
+    func setUpdatesEnabled(_ enabled: Bool) {
+        updatesEnabled = enabled
+        if enabled {
+            refreshUpdates()
+        } else {
+            updatesByID = [:]
+        }
+    }
+
+    /// Dati minimi e `Sendable` di un'app per il controllo aggiornamenti.
+    private struct UpdateTarget: Sendable {
+        let id: String
+        let url: URL
+        let bundleID: String?
+        let installed: String?
+    }
+
+    /// Controlla in background gli aggiornamenti delle app, usando la cache su
+    /// disco (saltando chi è stato controllato di recente, salvo `force`), con
+    /// concorrenza limitata, e pubblica le app aggiornabili.
+    func refreshUpdates(force: Bool = false) {
+        guard updatesEnabled else { return }
+        let targets = apps.map {
+            UpdateTarget(id: $0.id, url: $0.url, bundleID: $0.bundleIdentifier, installed: $0.version)
+        }
+        let ttl = updateTTL
+        Task.detached(priority: .utility) { [weak self] in
+            var cache = UpdateCache.load()
+            let now = Date().timeIntervalSince1970
+
+            // App che richiedono un controllo via rete (cache scaduta o assente,
+            // versione installata cambiata, oppure `force`).
+            let toCheck = targets.filter { t in
+                if force { return true }
+                guard let rec = cache[t.id] else { return true }
+                return now - rec.checkedAt >= ttl || rec.installedAtCheck != t.installed
+            }
+
+            // Controlli con concorrenza limitata, a lotti.
+            let batchSize = 6
+            var index = 0
+            while index < toCheck.count {
+                let batch = Array(toCheck[index ..< min(index + batchSize, toCheck.count)])
+                index += batchSize
+                let results = await withTaskGroup(of: (String, UpdateRecord).self) { group -> [(String, UpdateRecord)] in
+                    for t in batch {
+                        group.addTask {
+                            (t.id, await UpdateChecker.check(url: t.url, bundleID: t.bundleID, installed: t.installed))
+                        }
+                    }
+                    var acc: [(String, UpdateRecord)] = []
+                    for await pair in group { acc.append(pair) }
+                    return acc
+                }
+                for (id, rec) in results { cache[id] = rec }
+            }
+
+            UpdateCache.save(cache)
+
+            // App con una versione disponibile più recente di quella installata.
+            var updates: [String: UpdateInfo] = [:]
+            for t in targets {
+                guard let rec = cache[t.id],
+                      let latest = rec.latestVersion,
+                      let installed = t.installed,
+                      UpdateChecker.isNewer(latest, than: installed) else { continue }
+                updates[t.id] = UpdateInfo(latestVersion: latest,
+                                           source: rec.source ?? "",
+                                           url: rec.pageURL)
+            }
+            let final = updates
+            await MainActor.run { self?.updatesByID = final }
         }
     }
 

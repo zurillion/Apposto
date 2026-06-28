@@ -177,6 +177,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 if show { self?.applyDockIcon() }
             }
             .store(in: &cancellables)
+
+        settings.$checkForUpdates
+            .sink { [weak self] enabled in
+                self?.model.setUpdatesEnabled(enabled)
+            }
+            .store(in: &cancellables)
     }
 
     // MARK: - Monitor eventi (ESC + swipe trackpad)

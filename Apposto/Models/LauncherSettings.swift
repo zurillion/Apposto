@@ -37,6 +37,7 @@ final class LauncherSettings: ObservableObject {
         static let showOriginalName = "showOriginalName"
         static let showIntelBadge = "showIntelBadge"
         static let showVersion = "showVersion"
+        static let checkForUpdates = "checkForUpdates"
         static let theme = "theme"
     }
 
@@ -85,6 +86,10 @@ final class LauncherSettings: ObservableObject {
     /// Mostra la versione dell'app sotto al nome.
     @Published var showVersion: Bool { didSet { defaults.set(showVersion, forKey: Keys.showVersion) } }
 
+    /// Controlla in background la disponibilità di aggiornamenti (Sparkle + App
+    /// Store) e segnala con un badge le app aggiornabili. Opt-in (usa la rete).
+    @Published var checkForUpdates: Bool { didSet { defaults.set(checkForUpdates, forKey: Keys.checkForUpdates) } }
+
     /// Tema colorato selezionato.
     @Published var theme: AppTheme { didSet { defaults.set(theme.rawValue, forKey: Keys.theme) } }
 
@@ -102,6 +107,7 @@ final class LauncherSettings: ObservableObject {
         showOriginalName = (defaults.object(forKey: Keys.showOriginalName) as? Bool) ?? false
         showIntelBadge = (defaults.object(forKey: Keys.showIntelBadge) as? Bool) ?? false
         showVersion = (defaults.object(forKey: Keys.showVersion) as? Bool) ?? false
+        checkForUpdates = (defaults.object(forKey: Keys.checkForUpdates) as? Bool) ?? false
         theme = AppTheme(rawValue: defaults.string(forKey: Keys.theme) ?? "") ?? .blue
     }
 

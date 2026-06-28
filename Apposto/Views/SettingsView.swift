@@ -65,6 +65,19 @@ private struct GeneralSettingsTab: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
+
+            Section("Aggiornamenti") {
+                Toggle("Controlla aggiornamenti (Sparkle e App Store)", isOn: $settings.checkForUpdates)
+                if settings.checkForUpdates {
+                    HStack {
+                        Spacer()
+                        Button("Controlla ora") { model.refreshUpdates(force: true) }
+                    }
+                }
+                Text("Opt-in: contatta i feed Sparkle delle app e l'API del Mac App Store; un badge segnala le app aggiornabili. Le app di sistema o senza canale di aggiornamento non vengono controllate. Esito in cache per 24 ore.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
         }
         .padding(20)
     }

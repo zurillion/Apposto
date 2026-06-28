@@ -27,6 +27,7 @@ struct AppIconView: View {
                 .frame(width: iconSize, height: iconSize)
                 .overlay(alignment: .topTrailing) { tagIndicator }
                 .overlay(alignment: .bottomLeading) { intelBadge }
+                .overlay(alignment: .topLeading) { updateBadge }
 
             if showLabel {
                 VStack(spacing: 1) {
@@ -98,6 +99,20 @@ struct AppIconView: View {
                 .frame(width: dot, height: dot)
                 .overlay(Circle().strokeBorder(Color(nsColor: .windowBackgroundColor), lineWidth: 1.5))
                 .offset(x: -2, y: 2)
+        }
+    }
+
+    @ViewBuilder
+    private var updateBadge: some View {
+        if let info = model.updatesByID[app.id] {
+            let size = min(max(iconSize * 0.24, 14), 22)
+            Image(systemName: "arrow.up.circle.fill")
+                .symbolRenderingMode(.palette)
+                .foregroundStyle(.white, .green)
+                .font(.system(size: size))
+                .background(Circle().fill(.white))
+                .offset(x: -3, y: -3)
+                .help("Aggiornamento disponibile: \(info.latestVersion) (\(info.source))")
         }
     }
 
