@@ -19,21 +19,27 @@ struct LauncherRootView: View {
     private var filtered: [AppItem] {
         let parsed = SearchQuery.parse(searchText,
                                        knownCanonicalTags: Array(tagStore.displayByCanonical.keys))
-        // I chip "senza tag" e "Intel" sono token sentinella: li trattiamo a
-        // parte dai tag reali.
+        // I chip "senza tag", "Intel" e "update" sono token sentinella: li
+        // trattiamo a parte dai tag reali.
         let chipUntagged = committedTags.contains(SearchQuery.untaggedToken)
         let chipIntel = committedTags.contains(SearchQuery.intelToken)
+        let chipUpdate = committedTags.contains(SearchQuery.updateToken)
         let realTags = committedTags.filter {
             $0 != SearchQuery.untaggedToken && $0 != SearchQuery.intelToken
+                && $0 != SearchQuery.updateToken
         }
-        if realTags.isEmpty && !chipUntagged && !chipIntel && parsed.isEmpty { return model.apps }
+        if realTags.isEmpty && !chipUntagged && !chipIntel && !chipUpdate && parsed.isEmpty {
+            return model.apps
+        }
         return model.apps.filter { app in
             let appTags = tagStore.canonicalTags(for: app.id)
+            let hasUpdate = model.updatesByID[app.id] != nil
             if chipUntagged && !appTags.isEmpty { return false }
             if chipIntel && !app.isIntelOnly { return false }
+            if chipUpdate && !hasUpdate { return false }
             for tag in realTags where !appTags.contains(tag) { return false }
             return parsed.matches(appNames: app.searchNames, appTags: appTags,
-                                  isIntelOnly: app.isIntelOnly)
+                                  isIntelOnly: app.isIntelOnly, hasUpdate: hasUpdate)
         }
     }
 
@@ -86,6 +92,7 @@ struct LauncherRootView: View {
                              switch canon {
                              case SearchQuery.untaggedToken: return "Untagged"
                              case SearchQuery.intelToken: return "Intel"
+                             case SearchQuery.updateToken: return "Update"
                              default: return tagStore.displayByCanonical[canon] ?? canon
                              }
                          },
@@ -93,6 +100,7 @@ struct LauncherRootView: View {
                              switch canon {
                              case SearchQuery.untaggedToken: return .orange
                              case SearchQuery.intelToken: return .indigo
+                             case SearchQuery.updateToken: return .teal
                              default: return settings.theme.color
                              }
                          },
@@ -133,6 +141,7 @@ struct LauncherRootView: View {
         // Tag virtuali (parola-chiave → token sentinella del chip).
         let specials = SearchQuery.untaggedKeywords.map { ($0, SearchQuery.untaggedToken) }
                      + SearchQuery.intelKeywords.map { ($0, SearchQuery.intelToken) }
+                     + SearchQuery.updateKeywords.map { ($0, SearchQuery.updateToken) }
         let tagMatches = known.keys.filter { $0.hasPrefix(canon) }
         let specialMatches = specials.filter { $0.0.hasPrefix(canon) }
 
@@ -216,6 +225,10 @@ struct LauncherRootView: View {
                                color: .orange, token: SearchQuery.untaggedToken)
                     specialRow(title: "Intel", systemImage: "cpu",
                                color: .indigo, token: SearchQuery.intelToken)
+                    if settings.checkForUpdates {
+                        specialRow(title: "Update", systemImage: "arrow.up.circle.fill",
+                                   color: .teal, token: SearchQuery.updateToken)
+                    }
                 }
                 .padding(.horizontal, 8)
                 .padding(.bottom, 10)

@@ -22,20 +22,26 @@ struct SearchQuery {
     var requireUntagged = false
     /// Se vero (tag virtuale `#intel`), mostra solo le app solo-Intel.
     var requireIntel = false
+    /// Se vero (tag virtuale `#update`), mostra solo le app con un aggiornamento.
+    var requireUpdate = false
 
     /// Tag virtuali che filtrano le app prive di tag.
     static let untaggedKeywords = ["untagged", "notag", "no-tag", "senzatag", "senza-tag"]
     /// Tag virtuali che filtrano le app solo-Intel.
     static let intelKeywords = ["intel", "rosetta"]
+    /// Tag virtuali che filtrano le app con un aggiornamento disponibile.
+    static let updateKeywords = ["update", "updates", "aggiornamento", "aggiornamenti",
+                                 "aggiornabile", "aggiornabili"]
 
     /// Valori sentinella usati come "chip" per i filtri virtuali. Contengono un
     /// carattere NUL, quindi non possono mai coincidere con un tag reale.
     static let untaggedToken = "\u{0}untagged"
     static let intelToken = "\u{0}intel"
+    static let updateToken = "\u{0}update"
 
     var isEmpty: Bool {
         requiredTags.isEmpty && prefixTags.isEmpty && text.isEmpty
-            && !requireUntagged && !requireIntel
+            && !requireUntagged && !requireIntel && !requireUpdate
     }
 
     static func parse(_ raw: String, knownCanonicalTags: [String]) -> SearchQuery {
@@ -75,6 +81,15 @@ struct SearchQuery {
                 continue
             }
 
+            // Tag virtuale "update" (aggiornamento disponibile).
+            if let kw = updateKeywords.first(where: { lower == $0 || lower.hasPrefix($0 + " ") }) {
+                query.requireUpdate = true
+                let rest = String(leadingTrimmed.dropFirst(kw.count))
+                    .trimmingCharacters(in: .whitespaces)
+                if !rest.isEmpty { textParts.append(rest) }
+                continue
+            }
+
             if let match = known.first(where: { lower.hasPrefix($0) }) {
                 query.requiredTags.append(match)
                 let rest = String(leadingTrimmed.dropFirst(match.count))
@@ -93,9 +108,11 @@ struct SearchQuery {
     /// Verifica se un'app soddisfa la query. `appNames` contiene tutti i nomi su
     /// cui può avvenire la corrispondenza (nome localizzato + alias, es. il nome
     /// originale/inglese): basta che uno contenga il testo cercato.
-    func matches(appNames: [String], appTags: Set<String>, isIntelOnly: Bool) -> Bool {
+    func matches(appNames: [String], appTags: Set<String>,
+                 isIntelOnly: Bool, hasUpdate: Bool) -> Bool {
         if requireUntagged && !appTags.isEmpty { return false }
         if requireIntel && !isIntelOnly { return false }
+        if requireUpdate && !hasUpdate { return false }
         for tag in requiredTags where !appTags.contains(tag) { return false }
         for prefix in prefixTags where !appTags.contains(where: { $0.hasPrefix(prefix) }) { return false }
         if !text.isEmpty {
