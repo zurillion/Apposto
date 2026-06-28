@@ -19,16 +19,21 @@ struct LauncherRootView: View {
     private var filtered: [AppItem] {
         let parsed = SearchQuery.parse(searchText,
                                        knownCanonicalTags: Array(tagStore.displayByCanonical.keys))
-        // Il chip "senza tag" è un token sentinella: lo trattiamo a parte dai tag
-        // reali (richiede che l'app non abbia alcun tag).
+        // I chip "senza tag" e "Intel" sono token sentinella: li trattiamo a
+        // parte dai tag reali.
         let chipUntagged = committedTags.contains(SearchQuery.untaggedToken)
-        let realTags = committedTags.filter { $0 != SearchQuery.untaggedToken }
-        if realTags.isEmpty && !chipUntagged && parsed.isEmpty { return model.apps }
+        let chipIntel = committedTags.contains(SearchQuery.intelToken)
+        let realTags = committedTags.filter {
+            $0 != SearchQuery.untaggedToken && $0 != SearchQuery.intelToken
+        }
+        if realTags.isEmpty && !chipUntagged && !chipIntel && parsed.isEmpty { return model.apps }
         return model.apps.filter { app in
             let appTags = tagStore.canonicalTags(for: app.id)
             if chipUntagged && !appTags.isEmpty { return false }
+            if chipIntel && !app.isIntelOnly { return false }
             for tag in realTags where !appTags.contains(tag) { return false }
-            return parsed.matches(appNames: app.searchNames, appTags: appTags)
+            return parsed.matches(appNames: app.searchNames, appTags: appTags,
+                                  isIntelOnly: app.isIntelOnly)
         }
     }
 
@@ -77,12 +82,20 @@ struct LauncherRootView: View {
 
             TagSearchBar(committedTags: $committedTags,
                          text: $searchText,
-                         displayName: { $0 == SearchQuery.untaggedToken
-                                        ? "Untagged"
-                                        : (tagStore.displayByCanonical[$0] ?? $0) },
-                         chipColor: { $0 == SearchQuery.untaggedToken
-                                      ? .orange
-                                      : settings.theme.color },
+                         displayName: { canon in
+                             switch canon {
+                             case SearchQuery.untaggedToken: return "Untagged"
+                             case SearchQuery.intelToken: return "Intel"
+                             default: return tagStore.displayByCanonical[canon] ?? canon
+                             }
+                         },
+                         chipColor: { canon in
+                             switch canon {
+                             case SearchQuery.untaggedToken: return .orange
+                             case SearchQuery.intelToken: return .indigo
+                             default: return settings.theme.color
+                             }
+                         },
                          focusTrigger: model.resetToken,
                          onTab: autocompleteSearchTag,
                          onSubmit: launchFirst)
@@ -117,16 +130,17 @@ struct LauncherRootView: View {
         guard !canon.isEmpty else { return }
 
         let known = tagStore.displayByCanonical
-        let special = SearchQuery.untaggedKeywords
+        // Tag virtuali (parola-chiave → token sentinella del chip).
+        let specials = SearchQuery.untaggedKeywords.map { ($0, SearchQuery.untaggedToken) }
+                     + SearchQuery.intelKeywords.map { ($0, SearchQuery.intelToken) }
         let tagMatches = known.keys.filter { $0.hasPrefix(canon) }
-        let specialMatches = special.filter { $0.hasPrefix(canon) }
+        let specialMatches = specials.filter { $0.0.hasPrefix(canon) }
 
-        // Tag virtuale "senza tag": diventa un chip (token sentinella), come i
-        // tag reali, e il testo `#…` viene rimosso.
-        if special.contains(canon) || (specialMatches.count == 1 && tagMatches.isEmpty) {
-            if !committedTags.contains(SearchQuery.untaggedToken) {
-                committedTags.append(SearchQuery.untaggedToken)
-            }
+        // Tag virtuale: diventa un chip (token sentinella), come i tag reali, e
+        // il testo `#…` viene rimosso.
+        if let exact = specials.first(where: { $0.0 == canon })
+            ?? (specialMatches.count == 1 && tagMatches.isEmpty ? specialMatches[0] : nil) {
+            if !committedTags.contains(exact.1) { committedTags.append(exact.1) }
             searchText.removeSubrange(hashRange.lowerBound...)
             return
         }
@@ -140,7 +154,7 @@ struct LauncherRootView: View {
         }
 
         // Ambiguo: estendi al prefisso comune di tutti i candidati.
-        let all = Array(tagMatches) + specialMatches
+        let all = Array(tagMatches) + specialMatches.map { $0.0 }
         if all.count > 1 {
             let common = longestCommonPrefix(all)
             if common.count > canon.count {
@@ -198,7 +212,10 @@ struct LauncherRootView: View {
                     }
 
                     Divider().padding(.vertical, 4)
-                    untaggedRow
+                    specialRow(title: "Untagged", systemImage: "tag.slash",
+                               color: .orange, token: SearchQuery.untaggedToken)
+                    specialRow(title: "Intel", systemImage: "cpu",
+                               color: .indigo, token: SearchQuery.intelToken)
                 }
                 .padding(.horizontal, 8)
                 .padding(.bottom, 10)
@@ -240,19 +257,20 @@ struct LauncherRootView: View {
         searchText = ""
     }
 
-    /// Voce speciale in fondo all'elenco: filtra le app senza alcun tag.
-    private var untaggedRow: some View {
-        let active = committedTags == [SearchQuery.untaggedToken]
-        let color = Color.orange
+    /// Voce speciale in fondo all'elenco (tag virtuale): imposta la ricerca sul
+    /// solo chip-token indicato.
+    private func specialRow(title: String, systemImage: String,
+                            color: Color, token: String) -> some View {
+        let active = committedTags == [token]
         return Button {
-            committedTags = [SearchQuery.untaggedToken]
+            committedTags = [token]
             searchText = ""
         } label: {
             HStack(spacing: 8) {
-                Image(systemName: "tag.slash")
+                Image(systemName: systemImage)
                     .font(.system(size: 9))
                     .foregroundStyle(color)
-                Text("Untagged")
+                Text(title)
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(color)
                     .lineLimit(1)
