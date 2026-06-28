@@ -261,13 +261,16 @@ final class AppModel: ObservableObject {
                                            url: rec.pageURL)
             }
             let final = updates
-            await MainActor.run {
-                guard let self else { return }
-                if self.updatesEnabled { self.updatesByID = final }
-                self.lastUpdateCheck = Date()
-                self.isCheckingUpdates = false
-            }
+            await self?.applyUpdateResults(final)
         }
+    }
+
+    /// Pubblica sul main thread gli esiti del controllo aggiornamenti.
+    @MainActor
+    private func applyUpdateResults(_ updates: [String: UpdateInfo]) {
+        if updatesEnabled { updatesByID = updates }
+        lastUpdateCheck = Date()
+        isCheckingUpdates = false
     }
 
     /// Calcola in background le dimensioni dei bundle (con cache su disco) e le

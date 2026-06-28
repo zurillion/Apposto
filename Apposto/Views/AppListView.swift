@@ -7,9 +7,8 @@ private enum ListLayout {
     static let version: CGFloat = 78
     static let date: CGFloat = 104
     static let size: CGFloat = 80
-    static let update: CGFloat = 26
+    static let update: CGFloat = 66
     static let hInset: CGFloat = 20
-    static let rowHeight: CGFloat = 34
 }
 
 /// Vista a elenco: intestazione con colonne (le ordinabili sono cliccabili) e
@@ -39,7 +38,7 @@ struct AppListView: View {
         HStack(spacing: 12) {
             sortHeader("Nome", field: .name, alignment: .leading)
                 .frame(maxWidth: .infinity, alignment: .leading)
-            Text("Architettura")
+            sortHeader("Architettura", field: .architecture, alignment: .leading)
                 .frame(width: ListLayout.arch, alignment: .leading)
             Text("Versione")
                 .frame(width: ListLayout.version, alignment: .leading)
@@ -47,9 +46,8 @@ struct AppListView: View {
                 .frame(width: ListLayout.date, alignment: .leading)
             sortHeader("Dimensione", field: .size, alignment: .trailing)
                 .frame(width: ListLayout.size, alignment: .trailing)
-            // Spaziatore allineato alla colonna del badge update (altezza
-            // vincolata: altrimenti Color.clear si espande in verticale).
-            Color.clear.frame(width: ListLayout.update, height: 1)
+            sortHeader("Update", field: .update, alignment: .leading)
+                .frame(width: ListLayout.update, alignment: .leading)
         }
         .font(.system(size: 11, weight: .semibold))
         .foregroundStyle(.secondary)
@@ -138,7 +136,7 @@ struct AppRowView: View {
         .font(.system(size: 12))
         .lineLimit(1)
         .padding(.horizontal, ListLayout.hInset)
-        .frame(height: ListLayout.rowHeight)
+        .frame(height: settings.listRowHeight)
         .background(rowBackground)
         .contentShape(Rectangle())
         .onHover { inside in
@@ -159,6 +157,9 @@ struct AppRowView: View {
         }
     }
 
+    /// Lato dell'icona, in scala con l'altezza della riga.
+    private var iconSide: CGFloat { min(max(settings.listRowHeight - 12, 16), 32) }
+
     @ViewBuilder
     private var iconView: some View {
         if let icon = app.icon {
@@ -166,18 +167,18 @@ struct AppRowView: View {
                 .resizable()
                 .interpolation(.high)
                 .aspectRatio(contentMode: .fit)
-                .frame(width: 22, height: 22)
+                .frame(width: iconSide, height: iconSide)
         } else {
             RoundedRectangle(cornerRadius: 4)
                 .fill(Color.primary.opacity(0.08))
-                .frame(width: 22, height: 22)
+                .frame(width: iconSide, height: iconSide)
         }
     }
 
     /// Cella del badge update: larghezza sempre riservata (Color.clear di base),
     /// badge centrato sopra quando c'è un aggiornamento.
     private var updateBadge: some View {
-        ZStack {
+        ZStack(alignment: .leading) {
             Color.clear
             if let info = model.updatesByID[app.id] {
                 let color: Color = info.source == "App Store" ? .blue : .green
@@ -188,7 +189,7 @@ struct AppRowView: View {
                     .help("Aggiornamento disponibile: \(info.latestVersion) (\(info.source))")
             }
         }
-        .frame(width: ListLayout.update, height: ListLayout.rowHeight)
+        .frame(width: ListLayout.update, height: settings.listRowHeight)
     }
 
     private var rowBackground: some View {

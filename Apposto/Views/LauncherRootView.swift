@@ -397,7 +397,7 @@ struct LauncherRootView: View {
             }
             .padding(3)
             .background(RoundedRectangle(cornerRadius: 9).fill(Color.primary.opacity(0.08)))
-            .frame(maxWidth: 360)
+            .frame(maxWidth: 560)
 
             Spacer(minLength: 0)
 
@@ -490,6 +490,19 @@ struct LauncherRootView: View {
             return apps.sorted { a, b in
                 orderedBefore(a.dateAdded, b.dateAdded,
                               ascending: ascending, tieBreak: a.name, b.name)
+            }
+        case .architecture:
+            return apps.sorted { a, b in
+                let ra = a.architecture.sortRank, rb = b.architecture.sortRank
+                if ra != rb { return ascending ? ra < rb : ra > rb }
+                return a.name.localizedStandardCompare(b.name) == .orderedAscending
+            }
+        case .update:
+            return apps.sorted { a, b in
+                let ua = model.updatesByID[a.id] != nil ? 0 : 1
+                let ub = model.updatesByID[b.id] != nil ? 0 : 1
+                if ua != ub { return ascending ? ua < ub : ua > ub }
+                return a.name.localizedStandardCompare(b.name) == .orderedAscending
             }
         }
     }

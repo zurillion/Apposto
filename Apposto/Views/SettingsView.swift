@@ -157,6 +157,11 @@ private struct AppearanceSettingsTab: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
+
+            Section("Vista elenco") {
+                LabeledSlider(title: "Altezza righe", value: $settings.listRowHeight,
+                              range: 28...60, step: 2, unit: "px")
+            }
         }
         .padding(20)
     }

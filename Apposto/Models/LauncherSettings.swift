@@ -13,12 +13,16 @@ enum SortField: String, CaseIterable {
     case name
     case size
     case dateAdded
+    case architecture
+    case update
 
     var title: String {
         switch self {
         case .name: return "Nome"
         case .size: return "Dimensione"
         case .dateAdded: return "Data"
+        case .architecture: return "Architettura"
+        case .update: return "Update"
         }
     }
 }
@@ -45,6 +49,7 @@ final class LauncherSettings: ObservableObject {
         static let showVersion = "showVersion"
         static let checkForUpdates = "checkForUpdates"
         static let viewMode = "viewMode"
+        static let listRowHeight = "listRowHeight"
         static let theme = "theme"
     }
 
@@ -100,6 +105,9 @@ final class LauncherSettings: ObservableObject {
     /// Modalità di visualizzazione: icone o elenco.
     @Published var viewMode: AppViewMode { didSet { defaults.set(viewMode.rawValue, forKey: Keys.viewMode) } }
 
+    /// Altezza delle righe nella vista a elenco (in punti).
+    @Published var listRowHeight: Double { didSet { defaults.set(listRowHeight, forKey: Keys.listRowHeight) } }
+
     /// Tema colorato selezionato.
     @Published var theme: AppTheme { didSet { defaults.set(theme.rawValue, forKey: Keys.theme) } }
 
@@ -119,6 +127,7 @@ final class LauncherSettings: ObservableObject {
         showVersion = (defaults.object(forKey: Keys.showVersion) as? Bool) ?? false
         checkForUpdates = (defaults.object(forKey: Keys.checkForUpdates) as? Bool) ?? false
         viewMode = AppViewMode(rawValue: defaults.string(forKey: Keys.viewMode) ?? "") ?? .icons
+        listRowHeight = (defaults.object(forKey: Keys.listRowHeight) as? Double) ?? 34
         theme = AppTheme(rawValue: defaults.string(forKey: Keys.theme) ?? "") ?? .blue
     }
 

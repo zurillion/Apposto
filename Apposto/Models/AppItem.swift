@@ -16,6 +16,16 @@ enum AppArchitecture: String, Codable {
         case .unknown: return "—"
         }
     }
+
+    /// Ordine per l'ordinamento (nativo prima, sconosciuto in fondo).
+    var sortRank: Int {
+        switch self {
+        case .appleSilicon: return 0
+        case .universal: return 1
+        case .intel: return 2
+        case .unknown: return 3
+        }
+    }
 }
 
 /// Rappresenta una singola applicazione individuata sul disco.
