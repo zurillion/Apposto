@@ -109,7 +109,7 @@ struct AppRowView: View {
                     .lineLimit(1)
                     .truncationMode(.tail)
                 if settings.showTagIndicator && hasTags {
-                    Circle().fill(settings.theme.color).frame(width: 6, height: 6)
+                    Circle().fill(settings.theme.color).frame(width: dotSize, height: dotSize)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -133,10 +133,10 @@ struct AppRowView: View {
 
             updateBadge
         }
-        .font(.system(size: 12))
+        .font(.system(size: fontSize))
         .lineLimit(1)
         .padding(.horizontal, ListLayout.hInset)
-        .frame(height: settings.listRowHeight)
+        .frame(height: rowHeight)
         .background(rowBackground)
         .contentShape(Rectangle())
         .onHover { inside in
@@ -157,8 +157,12 @@ struct AppRowView: View {
         }
     }
 
-    /// Lato dell'icona, in scala con l'altezza della riga.
-    private var iconSide: CGFloat { min(max(settings.listRowHeight - 12, 16), 32) }
+    // Dimensioni in scala con l'altezza della riga.
+    private var rowHeight: CGFloat { settings.listRowHeight }
+    private var iconSide: CGFloat { max(rowHeight * 0.62, 16) }
+    private var fontSize: CGFloat { max(rowHeight * 0.36, 10) }
+    private var badgeSize: CGFloat { max(rowHeight * 0.42, 12) }
+    private var dotSize: CGFloat { max(fontSize * 0.5, 5) }
 
     @ViewBuilder
     private var iconView: some View {
@@ -185,11 +189,11 @@ struct AppRowView: View {
                 Image(systemName: "arrow.up.circle.fill")
                     .symbolRenderingMode(.palette)
                     .foregroundStyle(.white, color)
-                    .font(.system(size: 14))
+                    .font(.system(size: badgeSize))
                     .help("Aggiornamento disponibile: \(info.latestVersion) (\(info.source))")
             }
         }
-        .frame(width: ListLayout.update, height: settings.listRowHeight)
+        .frame(width: ListLayout.update, height: rowHeight)
     }
 
     private var rowBackground: some View {
