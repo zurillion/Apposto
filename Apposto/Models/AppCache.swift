@@ -11,7 +11,7 @@ enum AppCache {
         let bundleIdentifier: String?
         var aliases: [String]?
         var originalName: String?
-        var isIntelOnly: Bool?
+        var architecture: String?
         var version: String?
         var dateAdded: Double?
     }
@@ -35,7 +35,7 @@ enum AppCache {
                     bundleIdentifier: $0.bundleIdentifier,
                     aliases: $0.aliases ?? [],
                     originalName: $0.originalName,
-                    isIntelOnly: $0.isIntelOnly ?? false,
+                    architecture: AppArchitecture(rawValue: $0.architecture ?? "") ?? .unknown,
                     version: $0.version,
                     dateAdded: $0.dateAdded.map { Date(timeIntervalSince1970: $0) })
         }
@@ -48,7 +48,7 @@ enum AppCache {
                   bundleIdentifier: $0.bundleIdentifier,
                   aliases: $0.aliases.isEmpty ? nil : $0.aliases,
                   originalName: $0.originalName,
-                  isIntelOnly: $0.isIntelOnly ? true : nil,
+                  architecture: $0.architecture == .unknown ? nil : $0.architecture.rawValue,
                   version: $0.version,
                   dateAdded: $0.dateAdded?.timeIntervalSince1970)
         }

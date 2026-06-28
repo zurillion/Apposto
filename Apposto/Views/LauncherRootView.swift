@@ -75,6 +75,7 @@ struct LauncherRootView: View {
             model.visibleAppIDs = ids
         }
         .onChange(of: settings.sortField) { _ in indexSizesIfNeeded() }
+        .onChange(of: settings.viewMode) { _ in indexSizesIfNeeded() }
         .onChange(of: committedTags) { _ in model.currentPage = 0 }
         .onChange(of: searchText) { _ in model.currentPage = 0 }
         .onChange(of: model.tagEditorAnchorID) { anchor in
@@ -139,6 +140,8 @@ struct LauncherRootView: View {
                 Text("Nessuna applicazione trovata")
                     .foregroundStyle(.secondary)
                 Spacer()
+            } else if settings.viewMode == .list {
+                AppListView(apps: visible)
             } else {
                 PagedGridView(apps: visible)
             }
@@ -385,6 +388,7 @@ struct LauncherRootView: View {
     private func sortBar(count: Int) -> some View {
         HStack(spacing: 12) {
             sidebarToggle
+            viewModeToggle
 
             HStack(spacing: 4) {
                 ForEach(SortField.allCases, id: \.self) { field in
@@ -417,6 +421,21 @@ struct LauncherRootView: View {
         }
         .buttonStyle(.plain)
         .help(showTagSidebar ? "Nascondi i tag" : "Mostra i tag")
+    }
+
+    /// Pulsante che alterna vista a icone / vista a elenco.
+    private var viewModeToggle: some View {
+        Button {
+            settings.viewMode = settings.viewMode == .icons ? .list : .icons
+        } label: {
+            Image(systemName: settings.viewMode == .icons ? "list.bullet" : "square.grid.2x2")
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(Color.primary)
+                .frame(width: 26, height: 26)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help(settings.viewMode == .icons ? "Vista elenco" : "Vista icone")
     }
 
     private func sortSegment(_ field: SortField) -> some View {
@@ -489,7 +508,11 @@ struct LauncherRootView: View {
     }
 
     private func indexSizesIfNeeded() {
-        if settings.sortField == .size { model.ensureSizesIndexed() }
+        // Le dimensioni servono per l'ordinamento per dimensione e per la
+        // colonna "Dimensione" della vista a elenco.
+        if settings.sortField == .size || settings.viewMode == .list {
+            model.ensureSizesIndexed()
+        }
     }
 
     private func launchFirst() {

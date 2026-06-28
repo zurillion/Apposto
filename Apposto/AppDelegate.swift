@@ -228,7 +228,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         scrollMonitor = NSEvent.addLocalMonitorForEvents(matching: .scrollWheel) { [weak self] event in
             guard let self, self.windowController.isVisible else { return event }
-            self.handleScroll(event)
+            // La paginazione con swipe orizzontale ha senso solo per la griglia.
+            if self.settings.viewMode == .icons { self.handleScroll(event) }
             return event
         }
     }

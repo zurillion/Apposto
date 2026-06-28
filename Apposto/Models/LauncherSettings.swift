@@ -2,6 +2,12 @@ import Foundation
 import Combine
 import Carbon.HIToolbox
 
+/// Modalità di visualizzazione della griglia.
+enum AppViewMode: String {
+    case icons   // griglia di icone paginata
+    case list    // elenco a colonne
+}
+
 /// Criterio di ordinamento delle app.
 enum SortField: String, CaseIterable {
     case name
@@ -38,6 +44,7 @@ final class LauncherSettings: ObservableObject {
         static let showIntelBadge = "showIntelBadge"
         static let showVersion = "showVersion"
         static let checkForUpdates = "checkForUpdates"
+        static let viewMode = "viewMode"
         static let theme = "theme"
     }
 
@@ -90,6 +97,9 @@ final class LauncherSettings: ObservableObject {
     /// Store) e segnala con un badge le app aggiornabili. Opt-in (usa la rete).
     @Published var checkForUpdates: Bool { didSet { defaults.set(checkForUpdates, forKey: Keys.checkForUpdates) } }
 
+    /// Modalità di visualizzazione: icone o elenco.
+    @Published var viewMode: AppViewMode { didSet { defaults.set(viewMode.rawValue, forKey: Keys.viewMode) } }
+
     /// Tema colorato selezionato.
     @Published var theme: AppTheme { didSet { defaults.set(theme.rawValue, forKey: Keys.theme) } }
 
@@ -108,6 +118,7 @@ final class LauncherSettings: ObservableObject {
         showIntelBadge = (defaults.object(forKey: Keys.showIntelBadge) as? Bool) ?? false
         showVersion = (defaults.object(forKey: Keys.showVersion) as? Bool) ?? false
         checkForUpdates = (defaults.object(forKey: Keys.checkForUpdates) as? Bool) ?? false
+        viewMode = AppViewMode(rawValue: defaults.string(forKey: Keys.viewMode) ?? "") ?? .icons
         theme = AppTheme(rawValue: defaults.string(forKey: Keys.theme) ?? "") ?? .blue
     }
 

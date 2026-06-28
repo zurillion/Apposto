@@ -110,7 +110,7 @@ enum AppScanner {
                                      bundleIdentifier: bundleID,
                                      aliases: aliases,
                                      originalName: originalName,
-                                     isIntelOnly: isIntelOnly(bundle),
+                                     architecture: architecture(bundle),
                                      version: version,
                                      dateAdded: dateAdded))
             }
@@ -121,16 +121,18 @@ enum AppScanner {
         }
     }
 
-    /// `true` se l'eseguibile del bundle è solo per Intel (x86_64/i386) senza
-    /// una slice arm64: su Apple Silicon girerebbe solo tramite Rosetta. Se le
-    /// architetture non sono leggibili, prudenzialmente restituisce `false`.
-    private static func isIntelOnly(_ bundle: Bundle?) -> Bool {
+    /// Architettura dell'eseguibile del bundle, dalle slice del Mach-O. Se non
+    /// leggibili, restituisce `.unknown`.
+    private static func architecture(_ bundle: Bundle?) -> AppArchitecture {
         guard let archs = bundle?.executableArchitectures?.map({ $0.intValue }),
-              !archs.isEmpty else { return false }
+              !archs.isEmpty else { return .unknown }
         let hasARM = archs.contains(NSBundleExecutableArchitectureARM64)
         let hasIntel = archs.contains(NSBundleExecutableArchitectureX86_64)
                     || archs.contains(NSBundleExecutableArchitectureI386)
-        return hasIntel && !hasARM
+        if hasARM && hasIntel { return .universal }
+        if hasARM { return .appleSilicon }
+        if hasIntel { return .intel }
+        return .unknown
     }
 
     /// Normalizza un nome candidato: trim, rimozione dell'eventuale suffisso
