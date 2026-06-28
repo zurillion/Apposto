@@ -16,11 +16,14 @@ final class IconLoader {
     }
 
     /// Restituisce l'icona per il file indicato. La `completion` è sempre
-    /// invocata sul thread principale.
+    /// invocata sul thread principale e **in modo asincrono**: anche con icona
+    /// in cache la consegna è rinviata, così l'aggiornamento di `app.icon` non
+    /// avviene durante l'update della vista (che produrrebbe il warning
+    /// "Publishing changes from within view updates").
     func icon(for url: URL, completion: @escaping (NSImage) -> Void) {
         let key = url.path as NSString
         if let cached = cache.object(forKey: key) {
-            completion(cached)
+            DispatchQueue.main.async { completion(cached) }
             return
         }
         queue.async { [weak self] in
