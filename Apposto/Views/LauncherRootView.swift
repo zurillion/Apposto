@@ -13,6 +13,8 @@ struct LauncherRootView: View {
     @State private var searchText = ""
     /// Colonna laterale a scomparsa con l'elenco dei tag.
     @State private var showTagSidebar = false
+    /// Testo di filtro dell'elenco tag nella colonna laterale.
+    @State private var tagFilter = ""
 
     /// App filtrate: devono avere tutti i tag-chip e soddisfare il resto della
     /// query (nome e/o `#tag` ancora in digitazione, vedi `SearchQuery`).
@@ -76,6 +78,9 @@ struct LauncherRootView: View {
             model.currentPage = 0
             // Uscendo e rientrando nel launcher la colonna torna nascosta.
             showTagSidebar = false
+        }
+        .onChange(of: showTagSidebar) { shown in
+            if !shown { tagFilter = "" }
         }
     }
 
@@ -186,7 +191,14 @@ struct LauncherRootView: View {
     // MARK: - Colonna laterale dei tag
 
     private var tagSidebar: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        let filter = tagFilter.trimmingCharacters(in: .whitespaces)
+        let tags = tagStore.allTags.filter { matchesTagFilter($0, filter) }
+        let showUntagged = matchesTagFilter("Untagged", filter)
+        let showIntel = matchesTagFilter("Intel", filter)
+        let showUpdate = settings.checkForUpdates && matchesTagFilter("Update", filter)
+        let anySpecial = showUntagged || showIntel || showUpdate
+
+        return VStack(alignment: .leading, spacing: 0) {
             HStack {
                 Text("Tag")
                     .font(.system(size: 13, weight: .semibold))
@@ -203,13 +215,16 @@ struct LauncherRootView: View {
             }
             .padding(.horizontal, 14)
             .padding(.top, 14)
-            .padding(.bottom, 10)
+            .padding(.bottom, 8)
+
+            tagFilterField
+                .padding(.horizontal, 12)
+                .padding(.bottom, 8)
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 2) {
-                    let tags = tagStore.allTags
-                    if tags.isEmpty {
-                        Text("Nessun tag")
+                    if tags.isEmpty && !anySpecial {
+                        Text(filter.isEmpty ? "Nessun tag" : "Nessun tag corrispondente")
                             .font(.system(size: 12))
                             .foregroundStyle(.secondary)
                             .padding(.horizontal, 8)
@@ -218,16 +233,21 @@ struct LauncherRootView: View {
                         ForEach(tags, id: \.self) { tag in
                             tagRow(tag)
                         }
-                    }
-
-                    Divider().padding(.vertical, 4)
-                    specialRow(title: "Untagged", systemImage: "tag.slash",
-                               color: .orange, token: SearchQuery.untaggedToken)
-                    specialRow(title: "Intel", systemImage: "cpu",
-                               color: .indigo, token: SearchQuery.intelToken)
-                    if settings.checkForUpdates {
-                        specialRow(title: "Update", systemImage: "arrow.up.circle.fill",
-                                   color: .teal, token: SearchQuery.updateToken)
+                        if anySpecial {
+                            if !tags.isEmpty { Divider().padding(.vertical, 4) }
+                            if showUntagged {
+                                specialRow(title: "Untagged", systemImage: "tag.slash",
+                                           color: .orange, token: SearchQuery.untaggedToken)
+                            }
+                            if showIntel {
+                                specialRow(title: "Intel", systemImage: "cpu",
+                                           color: .indigo, token: SearchQuery.intelToken)
+                            }
+                            if showUpdate {
+                                specialRow(title: "Update", systemImage: "arrow.up.circle.fill",
+                                           color: .teal, token: SearchQuery.updateToken)
+                            }
+                        }
                     }
                 }
                 .padding(.horizontal, 8)
@@ -236,6 +256,34 @@ struct LauncherRootView: View {
         }
         .frame(width: 210)
         .background(Color.primary.opacity(0.05))
+    }
+
+    /// Campo di ricerca che riduce in tempo reale l'elenco dei tag.
+    private var tagFilterField: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+            TextField("Filtra tag", text: $tagFilter)
+                .textFieldStyle(.plain)
+                .font(.system(size: 12))
+            if !tagFilter.isEmpty {
+                Button { tagFilter = "" } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 5)
+        .background(RoundedRectangle(cornerRadius: 8).fill(Color.primary.opacity(0.08)))
+    }
+
+    private func matchesTagFilter(_ name: String, _ filter: String) -> Bool {
+        filter.isEmpty
+            || name.range(of: filter, options: [.caseInsensitive, .diacriticInsensitive]) != nil
     }
 
     private func tagRow(_ tag: String) -> some View {
