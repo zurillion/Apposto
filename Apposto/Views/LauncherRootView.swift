@@ -397,7 +397,7 @@ struct LauncherRootView: View {
             }
             .padding(3)
             .background(RoundedRectangle(cornerRadius: 9).fill(Color.primary.opacity(0.08)))
-            .frame(maxWidth: 560)
+            .frame(maxWidth: 600)
 
             Spacer(minLength: 0)
 
@@ -450,12 +450,14 @@ struct LauncherRootView: View {
             HStack(spacing: 4) {
                 Text(field.title)
                     .font(.system(size: 12, weight: .medium))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
                 if isActive {
                     Image(systemName: settings.sortAscending ? "chevron.up" : "chevron.down")
                         .font(.system(size: 9, weight: .bold))
                 }
             }
-            .padding(.horizontal, 12)
+            .padding(.horizontal, 10)
             .padding(.vertical, 4)
             .frame(maxWidth: .infinity)
             .background(
