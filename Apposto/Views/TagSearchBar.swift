@@ -6,7 +6,7 @@ struct TagSearchBar: View {
     @Binding var committedTags: [String]   // canonici
     @Binding var text: String
     let displayName: (String) -> String    // canonico → grafia
-    let color: Color
+    let chipColor: (String) -> Color       // canonico → colore del chip
     let focusTrigger: Int
     let onTab: () -> Void
     let onSubmit: () -> Void
@@ -62,7 +62,7 @@ struct TagSearchBar: View {
         .foregroundStyle(.white)
         .padding(.horizontal, 9)
         .padding(.vertical, 3)
-        .background(Capsule().fill(color))
+        .background(Capsule().fill(chipColor(canon)))
     }
 
     private func removeLastChip() {

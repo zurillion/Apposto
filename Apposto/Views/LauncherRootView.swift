@@ -19,10 +19,15 @@ struct LauncherRootView: View {
     private var filtered: [AppItem] {
         let parsed = SearchQuery.parse(searchText,
                                        knownCanonicalTags: Array(tagStore.displayByCanonical.keys))
-        if committedTags.isEmpty && parsed.isEmpty { return model.apps }
+        // Il chip "senza tag" è un token sentinella: lo trattiamo a parte dai tag
+        // reali (richiede che l'app non abbia alcun tag).
+        let chipUntagged = committedTags.contains(SearchQuery.untaggedToken)
+        let realTags = committedTags.filter { $0 != SearchQuery.untaggedToken }
+        if realTags.isEmpty && !chipUntagged && parsed.isEmpty { return model.apps }
         return model.apps.filter { app in
             let appTags = tagStore.canonicalTags(for: app.id)
-            for tag in committedTags where !appTags.contains(tag) { return false }
+            if chipUntagged && !appTags.isEmpty { return false }
+            for tag in realTags where !appTags.contains(tag) { return false }
             return parsed.matches(appNames: app.searchNames, appTags: appTags)
         }
     }
@@ -72,8 +77,12 @@ struct LauncherRootView: View {
 
             TagSearchBar(committedTags: $committedTags,
                          text: $searchText,
-                         displayName: { tagStore.displayByCanonical[$0] ?? $0 },
-                         color: settings.theme.color,
+                         displayName: { $0 == SearchQuery.untaggedToken
+                                        ? "Untagged"
+                                        : (tagStore.displayByCanonical[$0] ?? $0) },
+                         chipColor: { $0 == SearchQuery.untaggedToken
+                                      ? .orange
+                                      : settings.theme.color },
                          focusTrigger: model.resetToken,
                          onTab: autocompleteSearchTag,
                          onSubmit: launchFirst)
@@ -112,11 +121,13 @@ struct LauncherRootView: View {
         let tagMatches = known.keys.filter { $0.hasPrefix(canon) }
         let specialMatches = special.filter { $0.hasPrefix(canon) }
 
-        // Tag virtuale "senza tag": resta come testo (#untagged), interpretato
-        // dalla ricerca; non diventa un chip.
+        // Tag virtuale "senza tag": diventa un chip (token sentinella), come i
+        // tag reali, e il testo `#…` viene rimosso.
         if special.contains(canon) || (specialMatches.count == 1 && tagMatches.isEmpty) {
-            let kw = special.contains(canon) ? canon : specialMatches[0]
-            searchText.replaceSubrange(hashRange.upperBound..., with: kw)
+            if !committedTags.contains(SearchQuery.untaggedToken) {
+                committedTags.append(SearchQuery.untaggedToken)
+            }
+            searchText.removeSubrange(hashRange.lowerBound...)
             return
         }
 
@@ -231,12 +242,11 @@ struct LauncherRootView: View {
 
     /// Voce speciale in fondo all'elenco: filtra le app senza alcun tag.
     private var untaggedRow: some View {
-        let active = committedTags.isEmpty &&
-            SearchQuery.parse(searchText, knownCanonicalTags: []).requireUntagged
+        let active = committedTags == [SearchQuery.untaggedToken]
         let color = Color.orange
         return Button {
-            committedTags = []
-            searchText = "#untagged"
+            committedTags = [SearchQuery.untaggedToken]
+            searchText = ""
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: "tag.slash")

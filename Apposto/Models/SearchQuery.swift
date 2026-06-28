@@ -24,6 +24,10 @@ struct SearchQuery {
     /// Tag virtuali che filtrano le app prive di tag.
     static let untaggedKeywords = ["untagged", "notag", "no-tag", "senzatag", "senza-tag"]
 
+    /// Valore sentinella usato come "chip" per il filtro "senza tag". Contiene un
+    /// carattere NUL, quindi non può mai coincidere con un tag reale (canonico).
+    static let untaggedToken = "\u{0}untagged"
+
     var isEmpty: Bool {
         requiredTags.isEmpty && prefixTags.isEmpty && text.isEmpty && !requireUntagged
     }
