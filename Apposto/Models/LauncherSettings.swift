@@ -50,6 +50,7 @@ final class LauncherSettings: ObservableObject {
         static let checkForUpdates = "checkForUpdates"
         static let viewMode = "viewMode"
         static let listRowHeight = "listRowHeight"
+        static let showTagsColumn = "showTagsColumn"
         static let theme = "theme"
     }
 
@@ -114,6 +115,9 @@ final class LauncherSettings: ObservableObject {
     /// Altezza delle righe nella vista a elenco (in punti).
     @Published var listRowHeight: Double { didSet { defaults.set(listRowHeight, forKey: Keys.listRowHeight) } }
 
+    /// Mostra una colonna con tutti i tag (come chip) nella vista a elenco.
+    @Published var showTagsColumn: Bool { didSet { defaults.set(showTagsColumn, forKey: Keys.showTagsColumn) } }
+
     /// Tema colorato selezionato.
     @Published var theme: AppTheme { didSet { defaults.set(theme.rawValue, forKey: Keys.theme) } }
 
@@ -135,6 +139,7 @@ final class LauncherSettings: ObservableObject {
         launchAtLogin = LoginItem.isEnabled
         viewMode = AppViewMode(rawValue: defaults.string(forKey: Keys.viewMode) ?? "") ?? .icons
         listRowHeight = (defaults.object(forKey: Keys.listRowHeight) as? Double) ?? 34
+        showTagsColumn = (defaults.object(forKey: Keys.showTagsColumn) as? Bool) ?? false
         theme = AppTheme(rawValue: defaults.string(forKey: Keys.theme) ?? "") ?? .blue
     }
 

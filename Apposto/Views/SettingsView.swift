@@ -168,6 +168,10 @@ private struct AppearanceSettingsTab: View {
             Section("Vista elenco") {
                 LabeledSlider(title: "Altezza righe", value: $settings.listRowHeight,
                               range: 28...60, step: 2, unit: "px")
+                Toggle("Colonna con i tag", isOn: $settings.showTagsColumn)
+                Text("Mostra tutti i tag di ogni app come chip; la riga si alza se servono più righe.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
         }
         .padding(20)

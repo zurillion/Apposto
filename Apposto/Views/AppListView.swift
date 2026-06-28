@@ -8,6 +8,7 @@ private enum ListLayout {
     static let date: CGFloat = 104
     static let size: CGFloat = 80
     static let update: CGFloat = 66
+    static let tags: CGFloat = 260
     static let hInset: CGFloat = 20
 }
 
@@ -48,6 +49,9 @@ struct AppListView: View {
                 .frame(width: ListLayout.size, alignment: .trailing)
             sortHeader("Update", field: .update, alignment: .leading)
                 .frame(width: ListLayout.update, alignment: .leading)
+            if settings.showTagsColumn {
+                Text("Tag").frame(width: ListLayout.tags, alignment: .leading)
+            }
         }
         .font(.system(size: 11, weight: .semibold))
         .foregroundStyle(.secondary)
@@ -132,11 +136,19 @@ struct AppRowView: View {
                 .frame(width: ListLayout.size, alignment: .trailing)
 
             updateBadge
+
+            if settings.showTagsColumn {
+                WrappingChips(tags: tagStore.tags(for: app.id),
+                              color: settings.theme.color,
+                              fontSize: fontSize,
+                              width: ListLayout.tags - 8)
+                    .frame(width: ListLayout.tags, alignment: .leading)
+            }
         }
         .font(.system(size: fontSize))
         .lineLimit(1)
         .padding(.horizontal, ListLayout.hInset)
-        .frame(height: rowHeight)
+        .frame(minHeight: rowHeight)
         .background(rowBackground)
         .contentShape(Rectangle())
         .onHover { inside in
@@ -239,5 +251,63 @@ struct AppRowView: View {
         IconLoader.shared.icon(for: app.url) { [weak app] image in
             app?.icon = image
         }
+    }
+}
+
+/// Tag mostrati come chip che vanno a capo entro `width` (il wrapping è
+/// calcolato misurando il testo, così funziona anche su macOS 12).
+private struct WrappingChips: View {
+    let tags: [String]
+    let color: Color
+    let fontSize: CGFloat
+    let width: CGFloat
+
+    private var chipFontSize: CGFloat { max(fontSize * 0.82, 9) }
+    private let hPad: CGFloat = 6
+    private let chipSpacing: CGFloat = 4
+    private let lineSpacing: CGFloat = 3
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: lineSpacing) {
+            ForEach(Array(layout().enumerated()), id: \.offset) { item in
+                HStack(spacing: chipSpacing) {
+                    ForEach(item.element, id: \.self) { tag in chip(tag) }
+                }
+            }
+        }
+        .padding(.vertical, 4)
+    }
+
+    private func chip(_ tag: String) -> some View {
+        Text(tag)
+            .font(.system(size: chipFontSize, weight: .medium))
+            .foregroundStyle(.white)
+            .lineLimit(1)
+            .padding(.horizontal, hPad)
+            .padding(.vertical, 1.5)
+            .background(Capsule().fill(color))
+    }
+
+    /// Raggruppa i tag in righe che stanno nella larghezza disponibile.
+    private func layout() -> [[String]] {
+        let font = NSFont.systemFont(ofSize: chipFontSize, weight: .medium)
+        var lines: [[String]] = []
+        var current: [String] = []
+        var currentWidth: CGFloat = 0
+        for tag in tags {
+            let textW = (tag as NSString).size(withAttributes: [.font: font]).width
+            let chipW = ceil(textW) + hPad * 2
+            let needed = current.isEmpty ? chipW : chipW + chipSpacing
+            if !current.isEmpty && currentWidth + needed > width {
+                lines.append(current)
+                current = [tag]
+                currentWidth = chipW
+            } else {
+                current.append(tag)
+                currentWidth += needed
+            }
+        }
+        if !current.isEmpty { lines.append(current) }
+        return lines
     }
 }
