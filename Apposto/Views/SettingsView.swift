@@ -69,17 +69,42 @@ private struct GeneralSettingsTab: View {
             Section("Aggiornamenti") {
                 Toggle("Controlla aggiornamenti (Sparkle e App Store)", isOn: $settings.checkForUpdates)
                 if settings.checkForUpdates {
-                    HStack {
+                    HStack(spacing: 8) {
+                        updateStatus
                         Spacer()
                         Button("Controlla ora") { model.refreshUpdates(force: true) }
+                            .disabled(model.isCheckingUpdates)
                     }
                 }
-                Text("Opt-in: contatta i feed Sparkle delle app e l'API del Mac App Store; un badge segnala le app aggiornabili. Le app di sistema o senza canale di aggiornamento non vengono controllate. Esito in cache per 24 ore.")
+                Text("Opt-in: contatta i feed Sparkle delle app e l'API del Mac App Store; un badge segnala le app aggiornabili (verde = Sparkle, blu = App Store). Le app di sistema o senza canale di aggiornamento non vengono controllate. Esito in cache per 24 ore.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
         }
         .padding(20)
+    }
+
+    @ViewBuilder
+    private var updateStatus: some View {
+        if model.isCheckingUpdates {
+            HStack(spacing: 6) {
+                ProgressView().controlSize(.small)
+                Text("Controllo in corso…")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        } else if model.lastUpdateCheck != nil {
+            let n = model.updatesByID.count
+            HStack(spacing: 5) {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundStyle(.green)
+                Text(n == 0
+                     ? "Controllo completato — tutto aggiornato"
+                     : "Controllo completato — \(n) aggiornabil\(n == 1 ? "e" : "i")")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
     }
 
     private func themeSwatch(_ theme: AppTheme) -> some View {

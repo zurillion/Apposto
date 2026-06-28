@@ -14,6 +14,10 @@ final class AppModel: ObservableObject {
 
     /// App con un aggiornamento disponibile (appID → info), per il badge.
     @Published private(set) var updatesByID: [String: UpdateInfo] = [:]
+    /// `true` mentre è in corso un controllo aggiornamenti via rete.
+    @Published private(set) var isCheckingUpdates = false
+    /// Istante dell'ultimo controllo completato (per il riscontro in Preferenze).
+    @Published private(set) var lastUpdateCheck: Date?
     /// Se vero, controlla gli aggiornamenti in background (impostato dall'utente).
     var updatesEnabled = false
     private let updateTTL: TimeInterval = 60 * 60 * 24  // 24h
@@ -205,6 +209,9 @@ final class AppModel: ObservableObject {
     /// concorrenza limitata, e pubblica le app aggiornabili.
     func refreshUpdates(force: Bool = false) {
         guard updatesEnabled else { return }
+        // Evita controlli automatici sovrapposti (un "Controlla ora" forza sempre).
+        if isCheckingUpdates && !force { return }
+        isCheckingUpdates = true
         let targets = apps.map {
             UpdateTarget(id: $0.id, url: $0.url, bundleID: $0.bundleIdentifier, installed: $0.version)
         }
@@ -254,7 +261,12 @@ final class AppModel: ObservableObject {
                                            url: rec.pageURL)
             }
             let final = updates
-            await MainActor.run { self?.updatesByID = final }
+            await MainActor.run {
+                guard let self else { return }
+                if self.updatesEnabled { self.updatesByID = final }
+                self.lastUpdateCheck = Date()
+                self.isCheckingUpdates = false
+            }
         }
     }
 

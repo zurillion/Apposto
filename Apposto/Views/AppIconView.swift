@@ -106,9 +106,10 @@ struct AppIconView: View {
     private var updateBadge: some View {
         if let info = model.updatesByID[app.id] {
             let size = min(max(iconSize * 0.24, 14), 22)
+            let badgeColor: Color = info.source == "App Store" ? .blue : .green
             Image(systemName: "arrow.up.circle.fill")
                 .symbolRenderingMode(.palette)
-                .foregroundStyle(.white, .green)
+                .foregroundStyle(.white, badgeColor)
                 .font(.system(size: size))
                 .background(Circle().fill(.white))
                 .offset(x: -3, y: -3)
