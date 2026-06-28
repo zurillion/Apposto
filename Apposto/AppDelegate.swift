@@ -40,9 +40,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         setupBindings()
         setupEventMonitors()
         setupSettingsObservers()
-
-        // Primo avvio: mostra subito il launcher per dare un riscontro visibile.
-        showLauncher()
+        // Nessuna finestra all'avvio: l'app vive nella barra dei menu / Dock e si
+        // apre con la scorciatoia, dal menu o cliccando l'icona nel Dock.
     }
 
     /// Forza l'icona del Dock leggendola dall'asset catalog. Aggira due problemi

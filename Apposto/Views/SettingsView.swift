@@ -36,6 +36,13 @@ private struct GeneralSettingsTab: View {
             }
 
             Section("Generale") {
+                Toggle("Avvia all'accesso", isOn: $settings.launchAtLogin)
+                    .disabled(!LoginItem.isSupported)
+                if !LoginItem.isSupported {
+                    Text("L'avvio all'accesso richiede macOS 13 o successivo.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
                 Toggle("Mostra icona nel Dock", isOn: $settings.showInDock)
                 Toggle("Pallino sulle app con tag", isOn: $settings.showTagIndicator)
                 Toggle("Badge \"Intel\" sulle app solo-Intel", isOn: $settings.showIntelBadge)

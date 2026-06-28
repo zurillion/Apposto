@@ -102,6 +102,12 @@ final class LauncherSettings: ObservableObject {
     /// Store) e segnala con un badge le app aggiornabili. Opt-in (usa la rete).
     @Published var checkForUpdates: Bool { didSet { defaults.set(checkForUpdates, forKey: Keys.checkForUpdates) } }
 
+    /// Avvio automatico all'accesso. Lo stato è gestito dal sistema
+    /// (`SMAppService`), non da UserDefaults: il `didSet` lo applica.
+    @Published var launchAtLogin: Bool {
+        didSet { if launchAtLogin != oldValue { LoginItem.setEnabled(launchAtLogin) } }
+    }
+
     /// Modalità di visualizzazione: icone o elenco.
     @Published var viewMode: AppViewMode { didSet { defaults.set(viewMode.rawValue, forKey: Keys.viewMode) } }
 
@@ -126,6 +132,7 @@ final class LauncherSettings: ObservableObject {
         showIntelBadge = (defaults.object(forKey: Keys.showIntelBadge) as? Bool) ?? false
         showVersion = (defaults.object(forKey: Keys.showVersion) as? Bool) ?? false
         checkForUpdates = (defaults.object(forKey: Keys.checkForUpdates) as? Bool) ?? false
+        launchAtLogin = LoginItem.isEnabled
         viewMode = AppViewMode(rawValue: defaults.string(forKey: Keys.viewMode) ?? "") ?? .icons
         listRowHeight = (defaults.object(forKey: Keys.listRowHeight) as? Double) ?? 34
         theme = AppTheme(rawValue: defaults.string(forKey: Keys.theme) ?? "") ?? .blue
