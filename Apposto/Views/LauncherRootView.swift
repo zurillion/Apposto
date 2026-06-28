@@ -15,6 +15,10 @@ struct LauncherRootView: View {
     @State private var showTagSidebar = false
     /// Testo di filtro dell'elenco tag nella colonna laterale.
     @State private var tagFilter = ""
+    /// Lista "congelata" mentre l'editor dei tag è aperto: così un'app non
+    /// scompare dalla vista appena le si assegna (o toglie) un tag. Si ricalcola
+    /// alla chiusura dell'editor.
+    @State private var frozenVisible: [AppItem]? = nil
 
     /// App filtrate: devono avere tutti i tag-chip e soddisfare il resto della
     /// query (nome e/o `#tag` ancora in digitazione, vedi `SearchQuery`).
@@ -51,7 +55,8 @@ struct LauncherRootView: View {
     }
 
     var body: some View {
-        let visible = displayedApps
+        // Con l'editor dei tag aperto si usa la lista congelata (vedi sotto).
+        let visible = frozenVisible ?? displayedApps
         return HStack(spacing: 0) {
             if showTagSidebar {
                 tagSidebar
@@ -72,6 +77,15 @@ struct LauncherRootView: View {
         .onChange(of: settings.sortField) { _ in indexSizesIfNeeded() }
         .onChange(of: committedTags) { _ in model.currentPage = 0 }
         .onChange(of: searchText) { _ in model.currentPage = 0 }
+        .onChange(of: model.tagEditorAnchorID) { anchor in
+            // All'apertura dell'editor congela la lista corrente; alla chiusura
+            // la libera così la ricerca si riallinea ai nuovi tag.
+            if anchor == nil {
+                frozenVisible = nil
+            } else if frozenVisible == nil {
+                frozenVisible = displayedApps
+            }
+        }
         .onChange(of: model.resetToken) { _ in
             committedTags = []
             searchText = ""
